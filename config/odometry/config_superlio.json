@@ -1,0 +1,36 @@
+{
+  "odometry": {
+    "so_name": "libasuka_odometry_superlio.so",
+    "imu_buffer_capacity": 1000,
+    "lidar_buffer_capacity": 50
+  },
+  "kf": {
+    "max_iterations": 4,
+    "align_gravity": true,
+    "quit_eps": 0.001
+  },
+  "imu": {
+    "gravity_norm": 9.7946,
+    "imu_na": 0.1,
+    "imu_ng": 0.1,
+    "imu_nba": 0.0001,
+    "imu_nbg": 0.0001
+  },
+  "hash_map": {
+    "hash_capacity": 2000000,
+    "vox_resolution": 0.5
+  },
+  "preprocess": {
+    "min_distance": 2.0,
+    "max_distance": 60.0,
+    "filter_rate": 3,
+    "enable_downsample": true,
+    "voxel_filter_size": 0.5
+  },
+  "extrinsic": {
+    "odom_robo": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+  },
+  "eva": {
+    "timer": true
+  }
+}

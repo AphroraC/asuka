@@ -1,3 +1,12 @@
+#Pointclouds
+*.pcd
+*.ply
+*.xyz
+*.bin
+
+#Logging
+logs/**
+
 # Prerequisites
 *.d
 

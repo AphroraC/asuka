@@ -1,0 +1,43 @@
+{
+  "odometry": {
+    "so_name": "libasuka_odometry_smallpointlio.so",
+    "imu_buffer_capacity": 1000,
+    "lidar_buffer_capacity": 50
+  },
+  "imu": {
+    "gravity": [
+      0.0,
+      0.0,
+      -9.81
+    ],
+    "fix_gravity_direction": true,
+    "check_satu": true,
+    "satu_acc": 3.0,
+    "satu_gyro": 35.0,
+    "acc_norm": 9.80665
+  },
+  "preprocess": {
+    "min_distance": 0.5,
+    "max_distance": 100.0,
+    "point_filter_num": 1,
+    "space_downsample": true,
+    "space_downsample_leaf_size": 0.5
+  },
+  "filter": {
+    "laser_point_cov": 0.01,
+    "imu_meas_acc_cov": 0.01,
+    "imu_meas_omg_cov": 0.01,
+    "velocity_cov": 20.0,
+    "acceleration_cov": 500.0,
+    "omg_cov": 1000.0,
+    "ba_cov": 0.0001,
+    "bg_cov": 0.0001,
+    "plane_threshold": 0.1,
+    "match_squared": 81.0,
+    "map_resolution": 0.5,
+    "init_map_size": 10
+  },
+  "publish": {
+    "publish_odometry_without_downsample": false
+  }
+}

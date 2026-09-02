@@ -1,0 +1,57 @@
+{
+  "extensions": {
+    "loading_extension_modules": [
+      // "libasuka_optimization_loam.so",
+      // "libasuka_optimization_miao.so",
+      "libasuka_imu_prediction.so",
+      "libasuka_rviz_viewer.so"
+    ]
+  },
+  "rviz_viewer": {
+    "world_frame_id": "camera_init",
+    "imu_frame_id": "body",
+    "publish_odometry": true,
+    "publish_odometry_imu": true,
+    "publish_odometry_opt": true,
+    "publish_cloud_imu": true,
+    "publish_cloud_world": true,
+    "publish_tf": true
+  },
+  "imu_prediction": {
+    "gravity": 9.81,
+    "imu_scale": 1.0
+  },
+  "optimization_loam": {
+    "keyframe_meter_gap": 2.0,
+    "keyframe_deg_gap": 10.0,
+    "sc_dist_thres": 0.2,
+    "sc_max_radius": 80.0,
+    "history_keyframe_search_radius": 10.0,
+    "history_keyframe_search_time_diff": 30.0,
+    "history_keyframe_search_num": 25,
+    "loop_noise_score": 0.5,
+    "graph_update_times": 2,
+    "loop_fitness_score_threshold": 0.3,
+    "loop_closure_frequency": 2.0,
+    "graph_update_frequency": 1.0,
+    "vizmap_frequency": 0.1,
+    "publish_rate": 10.0,
+    "mapviz_filter_size": 0.4
+  },
+  "optimization_miao": {
+    "verbose": true,
+    "loop_kf_gap": 20,
+    "min_id_interval": 20,
+    "closest_id_th": 50,
+    "max_range": 30.0,
+    "ndt_score_th": 1.0,
+    "motion_trans_noise": 0.1,
+    "motion_rot_noise": 3.0,
+    "loop_trans_noise": 0.2,
+    "loop_rot_noise": 3.0,
+    "rk_loop_th": 1.04,
+    "with_height": true,
+    "height_noise": 0.1,
+    "publish_rate": 10.0
+  }
+}

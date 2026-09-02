@@ -1,0 +1,36 @@
+{
+  "odometry": {
+    "so_name": "libasuka_odometry_lightning.so",
+    "imu_buffer_capacity": 1000,
+    "lidar_buffer_capacity": 50,
+    "max_iteration": 8,
+    "esti_plane_threshold": 0.1,
+    "use_aa": false,
+    "keep_first_imu_estimation": false,
+    "enable_icp_part": true,
+    "plane_icp_weight": 1.0,
+    "icp_weight": 100,
+    "min_pts": 300,
+    "kf_dis_th": 2.0,
+    "kf_angle_th": 15.0,
+    "skip_lidar_num": 5,
+    "proj_kfs": false,
+    "max_proj_kfs": 5,
+    "imu_filter": false
+  },
+  "preprocess": {
+    "min_distance": 0.1,
+    "point_filter_num": 4,
+    "scan_line": 32
+  },
+  "mapping": {
+    "filter_size_scan": 0.5,
+    "filter_size_map": 0.5,
+    "ivox_grid_resolution": 0.2,
+    "ivox_nearby_type": 18
+  },
+  "roi": {
+    "height_max": 1.0,
+    "height_min": -1.0
+  }
+}

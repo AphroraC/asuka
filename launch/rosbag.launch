@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="bag_path" default="/share/rosbag/mapping.bag"/>
+
+  <param name="use_sim_time" value="true"/>
+
+  <node pkg="asuka" type="asuka_rosbag" name="asuka_rosbag" required="true" output="screen">
+    <param name="bag_path" value="$(arg bag_path)"/>
+  </node>
+</launch>

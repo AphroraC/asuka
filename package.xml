@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>asuka</name>
+  <version>1.0.0</version>
+  <description>
+    Asuka: versatile and extensible lidar-imu localization and mapping framework
+  </description>
+
+  <maintainer email="aphrorac@gmail.com">aphrorac</maintainer>
+  <license>GPL-3.0</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <depend>roscpp</depend>
+  <depend>rospy</depend>
+  <depend>nodelet</depend>
+  <depend>pcl_ros</depend>
+  <depend>pcl_conversions</depend>
+  <depend>std_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>tf</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_eigen</depend>
+  <depend>rosbag</depend>
+
+  <build_depend>eigen</build_depend>
+  <build_depend>pcl</build_depend>
+  <build_depend>spdlog</build_depend>
+  <build_depend>libboost-dev</build_depend>
+
+  <exec_depend>spdlog</exec_depend>
+
+  <export>
+    <nodelet plugin="${prefix}/nodelet_plugins.xml" />
+  </export>
+</package>

@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="nodelet_manager" default="nodelet_manager" />
+  <node pkg="nodelet" type="nodelet" name="$(arg nodelet_manager)" args="manager" output="screen"/>
+  <node pkg="nodelet" type="nodelet" name="asuka" args="load asuka/AsukaNodelet $(arg nodelet_manager)" output="screen"/>
+</launch>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<library path="libasuka_nodelet">
+  <class name="asuka/AsukaNodelet" type="asuka::AsukaNodelet" base_class_type="nodelet::Nodelet">
+    <description>Asuka Nodelet</description>
+  </class>
+</library>

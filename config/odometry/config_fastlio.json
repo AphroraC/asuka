@@ -1,0 +1,25 @@
+{
+  "odometry": {
+    "so_name": "libasuka_odometry_fastlio.so",
+    "imu_buffer_capacity": 1000,
+    "lidar_buffer_capacity": 50,
+    "max_iteration": 3,
+    "laser_point_cov": 0.001
+  },
+  "preprocess": {
+    "min_distance": 0.5,
+    "max_distance": 100.0,
+    "point_filter_num": 3,
+    "scan_line": 4,
+    "scan_rate": 10
+  },
+  "mapping": {
+    "gravity_estimation": true,
+    "fov_degree": 360
+  },
+  "filter": {
+    "filter_size_surf": 0.15,
+    "filter_size_map": 0.25,
+    "cube_side_length": 1000
+  }
+}

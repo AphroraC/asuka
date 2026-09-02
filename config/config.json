@@ -1,0 +1,18 @@
+{
+  "global": {
+    "config_ros": "config_ros.json",
+    "config_sensor": "config_sensor.json",
+    "config_odometry": "odometry/config_fastlio.json",
+    "config_extensions": "config_extensions.json"
+  },
+  "logging": {
+    "console_output": true,
+    "console_level": "info",
+    "file_output": true,
+    "logging_dir": "/share/pilot_ws/src/asuka/logs",
+    "logging_level": "info",
+    "rotate_logs": true,
+    "max_file_size_kb": 8192,
+    "max_files": 10
+  }
+}

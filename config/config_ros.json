@@ -1,0 +1,12 @@
+{
+  "ros": {
+    "lidar_type": "livox",
+    "imu_topic": "/livox/imu",
+    "lidar_topic": "/livox/lidar",
+    "acc_scale": 9.80665,
+    "imu_time_offset": 0.0,
+    "time_offset_lidar_to_imu": 0.0,
+    "enable_map_saving": true,
+    "map_saving_path": "/share/pointclouds"
+  }
+}
