@@ -232,9 +232,9 @@ bool OdometryEstimation::synchronize(batch::MeasureGroup& measurements) {
   const double begin_time = time_buffer.front();
   double end_time = begin_time;
   if (!cloud->empty()) {
-    double max_curvature = 0.0;
-    for (const auto& point : *cloud) max_curvature = std::max(max_curvature, static_cast<double>(point.curvature));
-    end_time = begin_time + max_curvature * 1e-3;
+    double max_offset = 0.0;
+    for (const auto& point : *cloud) max_offset = std::max(max_offset, static_cast<double>(point.offset));
+    end_time = begin_time + max_offset * 1e-3;
   }
   if (imu_enabled && last_imu_stamp < end_time) return false;
 
@@ -375,7 +375,7 @@ void OdometryEstimation::run_output_loop(const batch::MeasureGroup& measurements
     for (k_window = 0; k_window < static_cast<int>(time_seq.size()); k_window++) {
       PointT& point_body = feats_down_body->points[idx + time_seq[k_window]];
 
-      time_current = point_body.curvature / 1000.0 + pcl_beg_time;
+      time_current = point_body.offset / 1000.0 + pcl_beg_time;
 
       if (is_first_frame) {
         if (imu_enabled) {
@@ -445,7 +445,7 @@ void OdometryEstimation::run_output_loop(const batch::MeasureGroup& measurements
       time_predict_last_const = time_current;
 
       if (batch_dt > 0.0 && batch_deskew && time_seq[k_window] > 1) {
-        const double t_last_ms = feats_down_body->points[idx + time_seq[k_window]].curvature;
+        const double t_last_ms = feats_down_body->points[idx + time_seq[k_window]].offset;
         const Eigen::Vector3d omg_b = kf_output.x_.omg;
         const Eigen::Vector3d vel_w = kf_output.x_.vel;
         const Eigen::Matrix3d r_i = kf_output.x_.rot;
@@ -457,7 +457,7 @@ void OdometryEstimation::run_output_loop(const batch::MeasureGroup& measurements
         const Eigen::Vector3d t_li = extrinsic_T;
         for (int jj = 1; jj <= time_seq[k_window]; jj++) {
           PointT& pb = feats_down_body->points[idx + jj];
-          const double dt_j = (pb.curvature - t_last_ms) / 1000.0;
+          const double dt_j = (pb.offset - t_last_ms) / 1000.0;
           const Eigen::Vector3d p_imu = r_li * Eigen::Vector3d(pb.x, pb.y, pb.z) + t_li;
           const Eigen::Vector3d pd_imu = batch::deskew_point(p_imu, dt_j, omg_b, vel_w, r_i);
           const Eigen::Vector3d pd = r_li.transpose() * (pd_imu - t_li);
@@ -556,7 +556,7 @@ void OdometryEstimation::run_input_loop(const batch::MeasureGroup& measurements)
     idx = -1;
     for (k_window = 0; k_window < static_cast<int>(time_seq.size()); k_window++) {
       PointT& point_body = feats_down_body->points[idx + time_seq[k_window]];
-      time_current = point_body.curvature / 1000.0 + pcl_beg_time;
+      time_current = point_body.offset / 1000.0 + pcl_beg_time;
       if (is_first_frame) {
         while (time_current > imu_next.stamp) {
           imu_deque.pop_front();

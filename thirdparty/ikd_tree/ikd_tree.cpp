@@ -1,5 +1,7 @@
 #include <ikd_tree/ikd_tree.hpp>
 
+#include <asuka/core/types.hpp>
+
 /*
 Description: ikd-Tree: an incremental k-d tree for robotic applications
 Author: Yixi Cai
@@ -1458,3 +1460,4 @@ bool KD_TREE<PointType>::point_cmp_z(PointType a, PointType b) {
 template class KD_TREE<pcl::PointXYZ>;
 template class KD_TREE<pcl::PointXYZI>;
 template class KD_TREE<pcl::PointXYZINormal>;
+template class KD_TREE<asuka::PointXYZIOffset>;

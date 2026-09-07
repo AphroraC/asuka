@@ -188,12 +188,12 @@ bool OdometryEstimation::sync_packages(ImuMeasureGroup& measures) {
     if (measures.lidar->points.size() <= 1) {
       lidar_end_time = measures.lidar_beg_time + lidar_mean_scantime;
       logger->warn("Too few input point cloud!");
-    } else if (measures.lidar->points.back().curvature / double(1000) < 0.5 * lidar_mean_scantime) {
+    } else if (measures.lidar->points.back().offset / double(1000) < 0.5 * lidar_mean_scantime) {
       lidar_end_time = measures.lidar_beg_time + lidar_mean_scantime;
     } else {
       scan_num++;
-      lidar_end_time = measures.lidar_beg_time + measures.lidar->points.back().curvature / double(1000);
-      lidar_mean_scantime += (measures.lidar->points.back().curvature / double(1000) - lidar_mean_scantime) / scan_num;
+      lidar_end_time = measures.lidar_beg_time + measures.lidar->points.back().offset / double(1000);
+      lidar_mean_scantime += (measures.lidar->points.back().offset / double(1000) - lidar_mean_scantime) / scan_num;
 
       if ((lidar_end_time - measures.lidar_beg_time) > 5 * ::lightning::lo::lidar_time_interval) {
         lidar_end_time = measures.lidar_beg_time + ::lightning::lo::lidar_time_interval;

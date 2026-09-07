@@ -186,7 +186,7 @@ void OdometryEstimation::insert_frame(double stamp, const PointCloudT::ConstPtr&
   lidar_data.start_time = stamp;
   lidar_data.end_time = stamp;
   if (cloud && !cloud->empty()) {
-    lidar_data.end_time = stamp + cloud->points.back().curvature / 1000.0;
+    lidar_data.end_time = stamp + cloud->points.back().offset / 1000.0;
   }
   lidar_data.pc = cloud;
   {
@@ -367,7 +367,7 @@ void OdometryEstimation::propagation_undistort() {
       auto& pt_full = scan_undistort_full->points[idx];
       const auto& pt = raw_pc->points[idx];
       pt_full.intensity = pt.intensity;
-      double query_time = start_time + pt.curvature / 1000.0;
+      double query_time = start_time + pt.offset / 1000.0;
       if (query_time > propagate_states.back().time) {
         // Beyond the propagated states: keep the point in
         // the same end-time body frame as the normal

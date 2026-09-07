@@ -58,7 +58,7 @@ std::vector<int> time_compressing(const PointCloudT::Ptr& cloud) {
   time_seq_local.reserve(points_size);
   for (int i = 0; i < points_size - 1; i++) {
     j++;
-    if (cloud->points[i + 1].curvature > cloud->points[i].curvature) {
+    if (cloud->points[i + 1].offset > cloud->points[i].offset) {
       time_seq_local.emplace_back(j);
       j = 0;
     }
@@ -74,9 +74,9 @@ std::vector<int> time_compressing_batch(const PointCloudT::Ptr& cloud, double wi
   if (win_ms <= 0.0) return time_compressing(cloud);
   time_seq_local.reserve(points_size);
   int count = 1;
-  long cur_win = static_cast<long>(cloud->points[0].curvature / win_ms);
+  long cur_win = static_cast<long>(cloud->points[0].offset / win_ms);
   for (int i = 1; i < points_size; i++) {
-    const long w = static_cast<long>(cloud->points[i].curvature / win_ms);
+    const long w = static_cast<long>(cloud->points[i].offset / win_ms);
     if (w == cur_win) {
       count++;
     } else {
@@ -120,7 +120,7 @@ void reset_cov_output(Eigen::Matrix<double, 30, 30>& p_init_output) {
 }
 
 bool time_list(PointT& x, PointT& y) {
-  return (x.curvature < y.curvature);
+  return (x.offset < y.offset);
 }
 
 }  // namespace batch

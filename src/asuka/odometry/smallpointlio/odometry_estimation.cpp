@@ -102,7 +102,7 @@ void OdometryEstimation::insert_frame(double stamp, const PointCloudT::ConstPtr&
     std::lock_guard<std::mutex> lock(buffer_mutex);
     for (const auto& p : *cloud) {
       RawPoint rp;
-      rp.timestamp = stamp + p.curvature / 1000.0;
+      rp.timestamp = stamp + p.offset / 1000.0;
       rp.position = Eigen::Vector3f(p.x, p.y, p.z);
       dense_point_deque.push_back(rp);
       point_deque.push_back(rp);

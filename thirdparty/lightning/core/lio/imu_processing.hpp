@@ -264,7 +264,7 @@ inline void ImuProcess::UndistortPcl(const MeasureGroup &meas, ESKF &kf_state, C
     /*** sort point clouds by offset time ***/
     pcl_out = meas.scan_;
     std::sort(pcl_out->points.begin(), pcl_out->points.end(),
-              [](const PointType &p1, const PointType &p2) { return p1.curvature < p2.curvature; });
+              [](const PointType &p1, const PointType &p2) { return p1.offset < p2.offset; });
 
     /*** undistort each lidar point (backward propagation) ***/
     if (pcl_out->empty()) {
@@ -281,8 +281,8 @@ inline void ImuProcess::UndistortPcl(const MeasureGroup &meas, ESKF &kf_state, C
         acc_imu = (tail->acc);
         angvel_avr = (tail->gyr);
 
-        for (; it_pcl->curvature / double(1000) > head->offset_time && it_pcl != pcl_out->points.begin(); it_pcl--) {
-            dt = it_pcl->curvature / double(1000) - head->offset_time;
+        for (; it_pcl->offset / double(1000) > head->offset_time && it_pcl != pcl_out->points.begin(); it_pcl--) {
+            dt = it_pcl->offset / double(1000) - head->offset_time;
 
             /// dt 有时候存在非法数据
             if (dt < 0 || dt > lo::lidar_time_interval) {

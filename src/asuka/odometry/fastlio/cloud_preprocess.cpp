@@ -47,7 +47,7 @@ PointCloudT::Ptr CloudPreprocess::preprocess(double stamp, const pcl::PointCloud
     assigned.y = pt.y;
     assigned.z = pt.z;
     assigned.intensity = pt.intensity;
-    assigned.curvature = static_cast<float>((pt.timestamp - timebase) / 1e6);
+    assigned.offset = static_cast<float>((pt.timestamp - timebase) / 1e6);
 
     if (!(std::fabs(assigned.x - prev_assigned.x) > 1e-7f || std::fabs(assigned.y - prev_assigned.y) > 1e-7f ||
           std::fabs(assigned.z - prev_assigned.z) > 1e-7f)) {
@@ -93,7 +93,7 @@ PointCloudT::Ptr CloudPreprocess::preprocess(double stamp, const pcl::PointCloud
     added.y = pt.y;
     added.z = pt.z;
     added.intensity = pt.intensity;
-    added.curvature = static_cast<float>((pt.timestamp - timebase) / 1e6);
+    added.offset = static_cast<float>((pt.timestamp - timebase) / 1e6);
 
     if (!given_offset_time) {
       const int layer = pt.ring;
@@ -102,22 +102,22 @@ PointCloudT::Ptr CloudPreprocess::preprocess(double stamp, const pcl::PointCloud
       if (is_first[layer]) {
         yaw_fp[layer] = yaw_angle;
         is_first[layer] = false;
-        added.curvature = 0.0f;
-        time_last[layer] = added.curvature;
+        added.offset = 0.0f;
+        time_last[layer] = added.offset;
         continue;
       }
 
       if (yaw_angle <= yaw_fp[layer]) {
-        added.curvature = static_cast<float>((yaw_fp[layer] - yaw_angle) / omega_l);
+        added.offset = static_cast<float>((yaw_fp[layer] - yaw_angle) / omega_l);
       } else {
-        added.curvature = static_cast<float>((yaw_fp[layer] - yaw_angle + 360.0) / omega_l);
+        added.offset = static_cast<float>((yaw_fp[layer] - yaw_angle + 360.0) / omega_l);
       }
 
-      if (added.curvature < time_last[layer]) {
-        added.curvature += static_cast<float>(360.0 / omega_l);
+      if (added.offset < time_last[layer]) {
+        added.offset += static_cast<float>(360.0 / omega_l);
       }
 
-      time_last[layer] = added.curvature;
+      time_last[layer] = added.offset;
     }
 
     if (i % point_filter_num != 0) continue;

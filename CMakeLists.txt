@@ -14,6 +14,11 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type." FORCE)
 
+# Build the optimization_loam / optimization_miao backend extension modules.
+# Turn OFF to skip them along with the GTSAM dependency (and their exclusive
+# static helper libraries asuka_miao / asuka_scancontext).
+option(BUILD_OPTIMIZATION_MODULES "Build optimization_loam / optimization_miao extension modules (requires GTSAM)." OFF)
+
 include(CheckCXXCompilerFlag)
 check_cxx_compiler_flag("-mcx16" ASUKA_HAS_MCX16)
 if(ASUKA_HAS_MCX16)
@@ -21,6 +26,11 @@ if(ASUKA_HAS_MCX16)
 else()
   message(WARNING "asuka: -mcx16 is not supported; shared_ptr atomic operation fallback to libstdc++ lock pool implementation")
 endif()
+
+# asuka uses a custom point type (asuka::PointXYZIOffset): compile every PCL
+# template algorithm from its header implementation instead of relying on the
+# precompiled instantiations, which only cover stock PCL point types.
+add_definitions(-DPCL_NO_PRECOMPILE)
 
 # Enable OpenMP in FastLIO, but single thread is better
 # add_definitions(-DFASTLIO_ENABLE_OMP -DFASTLIO_NUM_THREADS=1)
@@ -42,8 +52,11 @@ find_package(Boost REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(PCL REQUIRED)
 find_package(spdlog REQUIRED)
-find_package(GTSAM REQUIRED)
 find_package(OpenMP)
+
+if(BUILD_OPTIMIZATION_MODULES)
+  find_package(GTSAM REQUIRED)
+endif()
 
 if(OpenMP_CXX_FOUND)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
@@ -69,25 +82,27 @@ add_library(asuka_ikd_tree STATIC thirdparty/ikd_tree/ikd_tree.cpp)
 target_include_directories(asuka_ikd_tree PUBLIC thirdparty)
 set_target_properties(asuka_ikd_tree PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
-add_library(asuka_miao STATIC
-  thirdparty/miao/core/graph/graph.cc
-  thirdparty/miao/core/graph/optimizer.cc
-  thirdparty/miao/core/common/string_tools.cc
-  thirdparty/miao/core/math/marginal_covariance_cholesky.cc
-  thirdparty/miao/core/opti_algo/optimization_algorithm.cc
-  thirdparty/miao/core/opti_algo/opti_algo_gauss_newton.cc
-  thirdparty/miao/core/opti_algo/opti_algo_lm.cc
-  thirdparty/miao/core/opti_algo/opti_algo_dogleg.cc
-  thirdparty/miao/core/solver/solver.cc
-)
-target_include_directories(asuka_miao PUBLIC
-  ${Eigen3_INCLUDE_DIRS}
-  thirdparty/miao
-  thirdparty/lightning
-  thirdparty/sophus 
+if(BUILD_OPTIMIZATION_MODULES)
+  add_library(asuka_miao STATIC
+    thirdparty/miao/core/graph/graph.cc
+    thirdparty/miao/core/graph/optimizer.cc
+    thirdparty/miao/core/common/string_tools.cc
+    thirdparty/miao/core/math/marginal_covariance_cholesky.cc
+    thirdparty/miao/core/opti_algo/optimization_algorithm.cc
+    thirdparty/miao/core/opti_algo/opti_algo_gauss_newton.cc
+    thirdparty/miao/core/opti_algo/opti_algo_lm.cc
+    thirdparty/miao/core/opti_algo/opti_algo_dogleg.cc
+    thirdparty/miao/core/solver/solver.cc
   )
-set_target_properties(asuka_miao PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_link_libraries(asuka_miao PUBLIC glog tbb)
+  target_include_directories(asuka_miao PUBLIC
+    ${Eigen3_INCLUDE_DIRS}
+    thirdparty/miao
+    thirdparty/lightning
+    thirdparty/sophus
+  )
+  set_target_properties(asuka_miao PROPERTIES POSITION_INDEPENDENT_CODE ON)
+  target_link_libraries(asuka_miao PUBLIC glog tbb)
+endif()
 
 add_library(asuka_core SHARED
   src/asuka/utility/config.cpp
@@ -167,15 +182,17 @@ add_library(asuka_odometry_lightning SHARED
 target_include_directories(asuka_odometry_lightning PRIVATE thirdparty/lightning thirdparty/sophus)
 target_link_libraries(asuka_odometry_lightning PUBLIC asuka_core glog tbb ${PCL_LIBRARIES})
 
-add_library(asuka_scancontext STATIC
-  thirdparty/scancontext/Scancontext.cpp
-)
-target_include_directories(asuka_scancontext PUBLIC
-  ${Eigen3_INCLUDE_DIRS}
-  ${PCL_INCLUDE_DIRS}
-  thirdparty/scancontext
-)
-set_target_properties(asuka_scancontext PROPERTIES POSITION_INDEPENDENT_CODE ON)
+if(BUILD_OPTIMIZATION_MODULES)
+  add_library(asuka_scancontext STATIC
+    thirdparty/scancontext/Scancontext.cpp
+  )
+  target_include_directories(asuka_scancontext PUBLIC
+    ${Eigen3_INCLUDE_DIRS}
+    ${PCL_INCLUDE_DIRS}
+    thirdparty/scancontext
+  )
+  set_target_properties(asuka_scancontext PROPERTIES POSITION_INDEPENDENT_CODE ON)
+endif()
 
 add_library(asuka_ros SHARED src/asuka/asuka_ros.cpp)
 target_link_libraries(asuka_ros asuka_core ${catkin_LIBRARIES})
@@ -184,10 +201,12 @@ add_library(asuka_rviz_viewer SHARED src/asuka/modules/rviz_viewer.cpp)
 target_link_libraries(asuka_rviz_viewer asuka_core ${catkin_LIBRARIES})
 add_library(asuka_imu_prediction SHARED src/asuka/modules/imu_prediction.cpp)
 target_link_libraries(asuka_imu_prediction asuka_core)
-add_library(asuka_optimization_loam SHARED src/asuka/modules/optimization_loam.cpp)
-target_link_libraries(asuka_optimization_loam asuka_core asuka_scancontext gtsam)
-add_library(asuka_optimization_miao SHARED src/asuka/modules/optimization_miao.cpp)
-target_link_libraries(asuka_optimization_miao asuka_core asuka_miao ${PCL_LIBRARIES})
+if(BUILD_OPTIMIZATION_MODULES)
+  add_library(asuka_optimization_loam SHARED src/asuka/modules/optimization_loam.cpp)
+  target_link_libraries(asuka_optimization_loam asuka_core asuka_scancontext gtsam)
+  add_library(asuka_optimization_miao SHARED src/asuka/modules/optimization_miao.cpp)
+  target_link_libraries(asuka_optimization_miao asuka_core asuka_miao ${PCL_LIBRARIES})
+endif()
 
 add_library(asuka_nodelet apps/asuka_nodelet.cpp)
 target_link_libraries(asuka_nodelet asuka_ros ${catkin_LIBRARIES})
@@ -196,14 +215,22 @@ target_link_libraries(asuka_rosnode asuka_ros ${catkin_LIBRARIES})
 add_executable(asuka_rosbag apps/asuka_rosbag.cpp)
 target_link_libraries(asuka_rosbag asuka_ros ${catkin_LIBRARIES})
 
-install(TARGETS asuka_core asuka_ikd_tree asuka_miao asuka_scancontext asuka_odometry_fastlio asuka_odometry_batchlio
+install(TARGETS asuka_core asuka_ikd_tree asuka_odometry_fastlio asuka_odometry_batchlio
   asuka_odometry_smallpointlio asuka_odometry_lightning asuka_odometry_superlio asuka_superlio_basic
-  asuka_ros asuka_rviz_viewer asuka_imu_prediction asuka_optimization_loam asuka_optimization_miao
+  asuka_ros asuka_rviz_viewer asuka_imu_prediction
   asuka_nodelet asuka_rosnode asuka_rosbag
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
+
+if(BUILD_OPTIMIZATION_MODULES)
+  install(TARGETS asuka_miao asuka_scancontext asuka_optimization_loam asuka_optimization_miao
+    ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+    LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+    RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+  )
+endif()
 install(DIRECTORY include/ DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
 
 install(FILES nodelet_plugins.xml

@@ -118,12 +118,12 @@ bool OdometryEstimation::sync_packages(ImuMeasureGroup& measures) {
     if (pending_lidar->points.size() <= 1) {
       lidar_end_time = pending_lidar_beg_time + lidar_mean_scantime;
       logger->warn("Too few input point cloud!");
-    } else if (pending_lidar->points.back().curvature / 1000.0 < 0.5 * lidar_mean_scantime) {
+    } else if (pending_lidar->points.back().offset / 1000.0 < 0.5 * lidar_mean_scantime) {
       lidar_end_time = pending_lidar_beg_time + lidar_mean_scantime;
     } else {
       scan_num++;
-      lidar_end_time = pending_lidar_beg_time + pending_lidar->points.back().curvature / 1000.0;
-      lidar_mean_scantime += (pending_lidar->points.back().curvature / 1000.0 - lidar_mean_scantime) / scan_num;
+      lidar_end_time = pending_lidar_beg_time + pending_lidar->points.back().offset / 1000.0;
+      lidar_mean_scantime += (pending_lidar->points.back().offset / 1000.0 - lidar_mean_scantime) / scan_num;
     }
     pending_lidar_end_time = lidar_end_time;
     lidar_pushed = true;

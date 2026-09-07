@@ -11,11 +11,13 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 
+#include <asuka/core/types.hpp>
+
 
 namespace lightning {
 
 
-using PointType = pcl::PointXYZINormal;
+using PointType = asuka::PointT;
 using PointCloudType = pcl::PointCloud<PointType>;
 using CloudPtr = PointCloudType::Ptr;
 using PointVec = std::vector<PointType, Eigen::aligned_allocator<PointType>>;

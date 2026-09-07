@@ -26,9 +26,32 @@ struct ImuData {
   Eigen::Vector3d angular_vel{Eigen::Vector3d::Zero()};
 };
 
-using PointT = pcl::PointXYZINormal;
+// 32-byte slim point, PCL convention (EIGEN_ALIGN16 + PCL_ADD_POINT4D):
+// xyz + intensity + per-point time offset. Replaces pcl::PointXYZINormal
+// (48 B), whose normal fields were never used anywhere in this project.
+struct EIGEN_ALIGN16 PointXYZIOffset {
+  PCL_ADD_POINT4D;
+  float intensity;
+  // Point time offset from the scan time base in milliseconds. Each odometry
+  // builds offsets against its own scan time base; the frame-level
+  // KeyFrame::stamp then records the first- or last-point stamp, as decided
+  // by the specific odometry.
+  float offset;
+
+  PointXYZIOffset() {
+    x = y = z = 0.0f;
+    data[3] = 0.0f;
+    intensity = 0.0f;
+    offset = 0.0f;
+  }
+
+  PCL_MAKE_ALIGNED_OPERATOR_NEW
+};
+
+static_assert(sizeof(PointXYZIOffset) == 32, "PointXYZIOffset must stay 32 bytes");
+using PointT = PointXYZIOffset;
 using PointCloudT = pcl::PointCloud<PointT>;
-// PointT::curvature stores the point time offset from scan start in milliseconds.
+// PointT::offset stores the point time offset from the scan time base in milliseconds.
 using PointVectorT = std::vector<PointT, Eigen::aligned_allocator<PointT>>;
 
 struct EIGEN_ALIGN16 LivoxPoint {
@@ -91,5 +114,13 @@ POINT_CLOUD_REGISTER_POINT_STRUCT(asuka::RobosensePoint,
   (float, intensity, intensity)
   (std::uint16_t, ring, ring)
   (double, timestamp, timestamp)
+)
+
+POINT_CLOUD_REGISTER_POINT_STRUCT(asuka::PointXYZIOffset,
+  (float, x, x)
+  (float, y, y)
+  (float, z, z)
+  (float, intensity, intensity)
+  (float, offset, offset)
 )
 // clang-format on

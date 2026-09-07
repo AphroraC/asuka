@@ -43,7 +43,7 @@ PointCloudT::Ptr CloudPreprocess::preprocess(double stamp, const pcl::PointCloud
     p.y = pt.y;
     p.z = pt.z;
     p.intensity = pt.intensity;
-    p.curvature = static_cast<float>((pt.timestamp - timebase) / 1e6);
+    p.offset = static_cast<float>((pt.timestamp - timebase) / 1e6);
     output->push_back(p);
   }
 
@@ -69,7 +69,7 @@ PointCloudT::Ptr CloudPreprocess::preprocess(double stamp, const pcl::PointCloud
     p.y = pt.y;
     p.z = pt.z;
     p.intensity = pt.intensity;
-    p.curvature = static_cast<float>((pt.timestamp - timebase) / 1e6);
+    p.offset = static_cast<float>((pt.timestamp - timebase) / 1e6);
     output->push_back(p);
   }
 

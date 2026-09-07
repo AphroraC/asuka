@@ -142,7 +142,7 @@ void ImuPreprocess::undistort_pcl(
 
   pcl_out = *(meas.lidar);
   std::sort(pcl_out.points.begin(), pcl_out.points.end(), [](const PointT& a, const PointT& b) {
-    return a.curvature < b.curvature;
+    return a.offset < b.offset;
   });
 
   ikfom::state_ikfom imu_state = kf_state.get_x();
@@ -235,8 +235,8 @@ void ImuPreprocess::undistort_pcl(
     acc_imu = tail->acc;
     angvel_avr = tail->gyro;
 
-    for (; it_pcl->curvature / 1000.0 > head->offset_time; it_pcl--) {
-      dt = it_pcl->curvature / 1000.0 - head->offset_time;
+    for (; it_pcl->offset / 1000.0 > head->offset_time; it_pcl--) {
+      dt = it_pcl->offset / 1000.0 - head->offset_time;
 
       Eigen::Matrix3d R_i(R_imu * ikfom::expSo3(Eigen::Vector3d(angvel_avr * dt)));
 

@@ -51,7 +51,7 @@ PointCloudT::Ptr CloudPreprocess::build_livox_surf(const pcl::PointCloud<LivoxPo
     stored.y = value.y;
     stored.z = value.z;
     stored.intensity = value.intensity;
-    stored.curvature = static_cast<float>((value.timestamp - time_base) * 1.0e-6);
+    stored.offset = static_cast<float>((value.timestamp - time_base) * 1.0e-6);
     const double dist = static_cast<double>(stored.x) * stored.x + static_cast<double>(stored.y) * stored.y +
                         static_cast<double>(stored.z) * stored.z;
     if (dist < min_distance * min_distance || dist > max_distance * max_distance) continue;
@@ -86,26 +86,26 @@ PointCloudT::Ptr CloudPreprocess::build_robosense_surf(const pcl::PointCloud<Rob
     point.y = value.y;
     point.z = value.z;
     point.intensity = value.intensity;
-    point.curvature = static_cast<float>((value.timestamp - time_head) * scale);
+    point.offset = static_cast<float>((value.timestamp - time_head) * scale);
     if (!given_offset_time && value.ring < static_cast<unsigned int>(num_scans)) {
       const int layer = value.ring;
       const double yaw_angle = std::atan2(point.y, point.x) * 57.2957;
       if (is_first[layer]) {
         yaw_first[layer] = yaw_angle;
         is_first[layer] = false;
-        point.curvature = 0.0f;
+        point.offset = 0.0f;
         yaw_last[layer] = static_cast<float>(yaw_angle);
-        time_last[layer] = point.curvature;
+        time_last[layer] = point.offset;
         continue;
       }
       if (yaw_angle <= yaw_first[layer]) {
-        point.curvature = static_cast<float>((yaw_first[layer] - yaw_angle) / omega_l);
+        point.offset = static_cast<float>((yaw_first[layer] - yaw_angle) / omega_l);
       } else {
-        point.curvature = static_cast<float>((yaw_first[layer] - yaw_angle + 360.0) / omega_l);
+        point.offset = static_cast<float>((yaw_first[layer] - yaw_angle + 360.0) / omega_l);
       }
-      if (point.curvature < time_last[layer]) point.curvature += static_cast<float>(360.0 / omega_l);
+      if (point.offset < time_last[layer]) point.offset += static_cast<float>(360.0 / omega_l);
       yaw_last[layer] = static_cast<float>(yaw_angle);
-      time_last[layer] = point.curvature;
+      time_last[layer] = point.offset;
     }
     const double dist = static_cast<double>(point.x) * point.x + static_cast<double>(point.y) * point.y +
                         static_cast<double>(point.z) * point.z;

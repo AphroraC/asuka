@@ -62,7 +62,7 @@ PointCloudT::Ptr CloudPreprocess::build(double stamp, const pcl::PointCloud<Livo
     p.y = point.position.y();
     p.z = point.position.z();
     p.intensity = 0.0f;
-    p.curvature = static_cast<float>(point.timestamp);
+    p.offset = static_cast<float>(point.timestamp);
     output->push_back(p);
   }
 
@@ -103,7 +103,7 @@ PointCloudT::Ptr CloudPreprocess::build(double stamp, const pcl::PointCloud<Robo
     p.y = point.position.y();
     p.z = point.position.z();
     p.intensity = 0.0f;
-    p.curvature = static_cast<float>(point.timestamp);
+    p.offset = static_cast<float>(point.timestamp);
     output->push_back(p);
   }
 
