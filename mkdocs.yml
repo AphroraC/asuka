@@ -1,0 +1,95 @@
+site_name: "Asuka"
+site_description: "Robust, minimal and extensible LiDAR-inertial SLAM framework"
+
+theme:
+  name: material
+  palette:
+    primary: indigo
+  font:
+    text: Roboto
+  features:
+    - content.code.copy
+
+use_directory_urls: false
+
+markdown_extensions:
+  - meta
+  - attr_list
+  - admonition
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+nav:
+  - 首页: index.md
+  - 安装: installation.md
+  - Docker: docker.md
+  - 快速上手: quickstart.md
+  - 参数速查: parameters.md
+  - 点云格式: point_type.md
+  - "项目入口与运行形态":
+      - "项目总览与架构地图": wiki/entry/01.md
+      - "ROS 节点入口 asuka_rosnode": wiki/entry/02.md
+      - "nodelet 与 rosbag 两种运行形态": wiki/entry/03.md
+  - "ROS 封装与数据接入主链路":
+      - "AsukaROS 构造装配与模块装载": wiki/ros/01.md
+      - "IMU 接入与标定补偿": wiki/ros/02.md
+      - "点云接入与雷达类型分发": wiki/ros/03.md
+      - "时间戳回环检测 handle_loop_back": wiki/ros/04.md
+      - "地图保存与退出时序（含风险点）": wiki/ros/05.md
+  - "核心框架 core":
+      - "里程计抽象接口与插件契约": wiki/core/01.md
+      - "异步执行器 AsyncOdometryEstimation": wiki/core/02.md
+      - "核心公共数据类型 types.hpp": wiki/core/03.md
+      - "全局回调定义 callbacks": wiki/core/04.md
+      - "通用预处理接口 cloud/imu preprocess": wiki/core/05.md
+  - "里程计算法实现（插件矩阵）":
+      - "五种算法总览与 so_name 动态选择": wiki/odometry/01.md
+      - "FastLIO 里程计主流程": wiki/odometry/02.md
+      - "FastLIO IMU 预处理": wiki/odometry/03.md
+      - "FastLIO 点云预处理与插件注册": wiki/odometry/04.md
+      - "Lightning 里程计主流程": wiki/odometry/05.md
+      - "Lightning 预处理与插件注册": wiki/odometry/06.md
+      - "BatchLIO 里程计主流程": wiki/odometry/07.md
+      - "BatchLIO 数学工具与公共结构": wiki/odometry/08.md
+      - "BatchLIO 预处理与插件注册": wiki/odometry/09.md
+      - "SmallPointLIO 主流程与自带 ESKF": wiki/odometry/10.md
+      - "SmallPointLIO 预处理与插件注册": wiki/odometry/11.md
+      - "SuperLIO 里程计主流程": wiki/odometry/12.md
+      - "SuperLIO ESKF 与流形运算": wiki/odometry/13.md
+      - "SuperLIO 八叉体素地图与近邻结构": wiki/odometry/14.md
+      - "SuperLIO 辅助设施与预处理": wiki/odometry/15.md
+  - "算法功能模块 modules":
+      - "IMU 前向预测模块": wiki/modules/01.md
+      - "LOAM 点面优化": wiki/modules/02.md
+      - "Miao 图优化模块": wiki/modules/03.md
+      - "RViz 可视化模块": wiki/modules/04.md
+  - "插件机制与基础设施 utility":
+      - "dlopen 动态加载器与句柄注册表": wiki/infra/01.md
+      - "扩展模块机制 ExtensionModule": wiki/infra/02.md
+      - "配置系统与 JSON 读取": wiki/infra/03.md
+      - "日志系统": wiki/infra/04.md
+      - "回调槽 CallbackSlot": wiki/infra/05.md
+  - "配置边界":
+      - "全局配置层级": wiki/configs/01.md
+      - "里程计配置变体与实现切换": wiki/configs/02.md
+  - "跨模块边界与数据流":
+      - "端到端数据流主链路": wiki/dataflow/01.md
+      - "线程模型与停机时序（风险点）": wiki/dataflow/02.md
+      - "核心状态与缓冲管理": wiki/dataflow/03.md
+  - "第三方依赖 thirdparty":
+      - "ikd_tree 增量 KD 树": wiki/thirdparty/01.md
+      - "esekfom 与 mtk 流形库": wiki/thirdparty/02.md
+      - "ivox 增量局部地图": wiki/thirdparty/03.md
+      - "Lightning 算法库": wiki/thirdparty/04.md
+      - "miao 图优化库": wiki/thirdparty/05.md
+      - "ankerl 高性能哈希容器": wiki/thirdparty/06.md
+  - 架构总览: architecture.md
+  - 核心 API: api.md
+  - FAQ: faq.md
