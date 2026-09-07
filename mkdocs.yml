@@ -1,5 +1,6 @@
 site_name: "Asuka"
 site_description: "Robust, minimal and extensible LiDAR-inertial SLAM framework"
+site_url: "https://aphrorac.github.io/asuka/"
 
 theme:
   name: material

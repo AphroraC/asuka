@@ -1,0 +1,3093 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="FastLIO 的误差状态 Kalman 框架 esekfom（78KB 核心头文件）与 mtk 流形库（SOn/S2/vect/SubManifold 等），use_ikfom.hpp 定义状态与观测构建，so3_math/pose6d 提供基础数学工具。">
+      
+      
+      
+        <link rel="canonical" href="https://aphrorac.github.io/asuka/wiki/thirdparty/02.html">
+      
+      
+        <link rel="prev" href="01.html">
+      
+      
+        <link rel="next" href="03.html">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>esekfom 与 mtk 流形库 - Asuka</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#esekfom-mtk" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../index.html" title="Asuka" class="md-header__button md-logo" aria-label="Asuka" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Asuka
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              esekfom 与 mtk 流形库
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../index.html" title="Asuka" class="md-nav__button md-logo" aria-label="Asuka" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Asuka
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    首页
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    安装
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../docker.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../quickstart.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    快速上手
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../parameters.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    参数速查
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../point_type.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    点云格式
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    项目入口与运行形态
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    项目入口与运行形态
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../entry/01.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    项目总览与架构地图
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../entry/02.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ROS 节点入口 asuka_rosnode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../entry/03.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    nodelet 与 rosbag 两种运行形态
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ROS 封装与数据接入主链路
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ROS 封装与数据接入主链路
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ros/01.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AsukaROS 构造装配与模块装载
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ros/02.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IMU 接入与标定补偿
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ros/03.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    点云接入与雷达类型分发
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ros/04.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    时间戳回环检测 handle_loop_back
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ros/05.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    地图保存与退出时序（含风险点）
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    核心框架 core
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    核心框架 core
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core/01.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    里程计抽象接口与插件契约
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core/02.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    异步执行器 AsyncOdometryEstimation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core/03.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    核心公共数据类型 types.hpp
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core/04.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    全局回调定义 callbacks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core/05.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    通用预处理接口 cloud/imu preprocess
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    里程计算法实现（插件矩阵）
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    里程计算法实现（插件矩阵）
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../odometry/01.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    五种算法总览与 so_name 动态选择
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../odometry/02.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FastLIO 里程计主流程
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../odometry/03.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FastLIO IMU 预处理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../odometry/04.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FastLIO 点云预处理与插件注册
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../odometry/05.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lightning 里程计主流程
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../odometry/06.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lightning 预处理与插件注册
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../odometry/07.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    BatchLIO 里程计主流程
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../odometry/08.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    BatchLIO 数学工具与公共结构
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../odometry/09.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    BatchLIO 预处理与插件注册
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../odometry/10.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SmallPointLIO 主流程与自带 ESKF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../odometry/11.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SmallPointLIO 预处理与插件注册
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../odometry/12.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SuperLIO 里程计主流程
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../odometry/13.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SuperLIO ESKF 与流形运算
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../odometry/14.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SuperLIO 八叉体素地图与近邻结构
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../odometry/15.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SuperLIO 辅助设施与预处理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    算法功能模块 modules
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    算法功能模块 modules
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/01.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IMU 前向预测模块
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/02.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LOAM 点面优化
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/03.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Miao 图优化模块
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/04.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RViz 可视化模块
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12" >
+        
+          
+          <label class="md-nav__link" for="__nav_12" id="__nav_12_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    插件机制与基础设施 utility
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    插件机制与基础设施 utility
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../infra/01.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    dlopen 动态加载器与句柄注册表
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../infra/02.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    扩展模块机制 ExtensionModule
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../infra/03.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    配置系统与 JSON 读取
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../infra/04.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    日志系统
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../infra/05.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    回调槽 CallbackSlot
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_13" >
+        
+          
+          <label class="md-nav__link" for="__nav_13" id="__nav_13_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    配置边界
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_13">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    配置边界
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configs/01.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    全局配置层级
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configs/02.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    里程计配置变体与实现切换
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_14" >
+        
+          
+          <label class="md-nav__link" for="__nav_14" id="__nav_14_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    跨模块边界与数据流
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_14_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_14">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    跨模块边界与数据流
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dataflow/01.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    端到端数据流主链路
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dataflow/02.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    线程模型与停机时序（风险点）
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dataflow/03.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    核心状态与缓冲管理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_15" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_15" id="__nav_15_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第三方依赖 thirdparty
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_15_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    第三方依赖 thirdparty
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="01.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ikd_tree 增量 KD 树
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    esekfom 与 mtk 流形库
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="02.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    esekfom 与 mtk 流形库
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        文件地图
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mtk-esekfom" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        分层：mtk 管"状态怎么存"，esekfom 管"状态怎么估"
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mtk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mtk：宏展开的复合流形
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="mtk：宏展开的复合流形">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mtk_build_manifold" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MTK_BUILD_MANIFOLD 做了什么
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        基础类型
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#use_ikfomhpp-fastlio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        use_ikfom.hpp：把滤波器绑定到 FastLIO 问题
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="use_ikfom.hpp：把滤波器绑定到 FastLIO 问题">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#state_ikfom" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        state_ikfom 的字段与维度
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        过程模型与雅可比
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#esekfomesekf" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        esekfom::esekf：迭代误差状态滤波器
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="esekfom::esekf：迭代误差状态滤波器">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        模板与维度约定
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        六种模型注册入口
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#predict" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        predict 的数据流
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fastlio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        与 FastLIO 里程计的调用链
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        边界条件与阅读注意
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        扩展点
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        关联源码
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="03.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ivox 增量局部地图
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="04.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lightning 算法库
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="05.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    miao 图优化库
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="06.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ankerl 高性能哈希容器
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    架构总览
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    核心 API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        文件地图
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mtk-esekfom" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        分层：mtk 管"状态怎么存"，esekfom 管"状态怎么估"
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mtk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mtk：宏展开的复合流形
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="mtk：宏展开的复合流形">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mtk_build_manifold" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MTK_BUILD_MANIFOLD 做了什么
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        基础类型
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#use_ikfomhpp-fastlio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        use_ikfom.hpp：把滤波器绑定到 FastLIO 问题
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="use_ikfom.hpp：把滤波器绑定到 FastLIO 问题">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#state_ikfom" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        state_ikfom 的字段与维度
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        过程模型与雅可比
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#esekfomesekf" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        esekfom::esekf：迭代误差状态滤波器
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="esekfom::esekf：迭代误差状态滤波器">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        模板与维度约定
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        六种模型注册入口
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#predict" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        predict 的数据流
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fastlio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        与 FastLIO 里程计的调用链
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        边界条件与阅读注意
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        扩展点
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        关联源码
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="esekfom-mtk">esekfom 与 mtk 流形库</h1>
+<p><code>src/asuka/thirdparty/fastlio</code> 是 FastLIO 里程计实现所依赖的滤波与数学底座：<code>esekfom/esekfom.hpp</code>（约 78KB，单头文件）提供迭代误差状态 Kalman 滤波器（IESKF）模板类，<code>mtk/</code> 子树提供"流形上的状态表示"，而 <code>use_ikfom.hpp</code> 是把这两者绑定到 FastLIO 具体问题的用户层定义。版权头显示 esekfom 来自港大 2019–2023 的修改版（Dongjia HE），mtk 核心源自不莱梅大学 2008–2011 的 MTK 实现（<code>build_manifold.hpp</code> 头部直接引用了 Hertzberg 等人 2011 年的流形封装论文）。</p>
+<h2 id="_1">文件地图</h2>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>体量</th>
+<th>职责</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>esekfom/esekfom.hpp</code></td>
+<td>78KB</td>
+<td>IESKF 模板类 <code>esekf</code>：预测、迭代更新、六种模型注册入口</td>
+</tr>
+<tr>
+<td><code>esekfom/util.hpp</code></td>
+<td>2.3KB</td>
+<td>滤波器配套小工具，被 <code>esekfom.hpp</code> 直接包含</td>
+</tr>
+<tr>
+<td><code>use_ikfom.hpp</code></td>
+<td>4.7KB</td>
+<td>定义 <code>state_ikfom</code>/<code>input_ikfom</code>/过程噪声与过程模型、雅可比</td>
+</tr>
+<tr>
+<td><code>mtk/build_manifold.hpp</code></td>
+<td>12.6KB</td>
+<td><code>MTK_BUILD_MANIFOLD</code> 宏：从字段序列自动生成复合流形</td>
+</tr>
+<tr>
+<td><code>mtk/startIdx.hpp</code></td>
+<td>12.9KB</td>
+<td>成员指针 → 切向子向量索引的换算（<code>MTK::subvector</code>）</td>
+</tr>
+<tr>
+<td><code>mtk/src/SubManifold.hpp</code></td>
+<td>4.9KB</td>
+<td>每个状态字段的包装，携带 IDX/DIM/TYP 常量</td>
+</tr>
+<tr>
+<td><code>mtk/src/vectview.hpp</code></td>
+<td>6.8KB</td>
+<td>切片视图类型，<code>subvector</code> 返回值的载体</td>
+</tr>
+<tr>
+<td><code>mtk/src/mtkmath.hpp</code></td>
+<td>10.5KB</td>
+<td><code>MTK::hat</code> 等李群基础运算</td>
+</tr>
+<tr>
+<td><code>mtk/types/vect.hpp</code></td>
+<td>15.1KB</td>
+<td>欧式向量流形 <code>MTK::vect&lt;N, T&gt;</code></td>
+</tr>
+<tr>
+<td><code>mtk/types/SOn.hpp</code></td>
+<td>10.9KB</td>
+<td>旋转群流形 <code>MTK::SO3&lt;T&gt;</code></td>
+</tr>
+<tr>
+<td><code>mtk/types/S2.hpp</code></td>
+<td>10.7KB</td>
+<td>单位球面流形 <code>MTK::S2</code>（三维存储、二维切空间）</td>
+</tr>
+<tr>
+<td><code>mtk/types/wrapped_cv_mat.hpp</code></td>
+<td>3.3KB</td>
+<td>OpenCV Mat 包装，FastLIO 状态未用到</td>
+</tr>
+<tr>
+<td><code>so3_math.hpp</code> / <code>pose6d.hpp</code></td>
+<td>3.3KB / 1.5KB</td>
+<td>四元数/SO(3) 小函数与 6 自由度位姿结构，独立于滤波框架</td>
+</tr>
+</tbody>
+</table>
+<h2 id="mtk-esekfom">分层：mtk 管"状态怎么存"，esekfom 管"状态怎么估"</h2>
+<pre class="mermaid"><code>graph TD
+    LIO["FastLIO 里程计实现&lt;br/&gt;(算法插件)"] --&gt; UIK["use_ikfom.hpp&lt;br/&gt;state_ikfom / input_ikfom / get_f / df_dx"]
+    LIO --&gt; EKF["esekfom/esekfom.hpp&lt;br/&gt;class esekf"]
+
+    UIK --&gt; BM["mtk/build_manifold.hpp&lt;br/&gt;MTK_BUILD_MANIFOLD 宏"]
+    UIK --&gt; TY["mtk/types/&lt;br/&gt;vect.hpp · SOn.hpp · S2.hpp"]
+    EKF --&gt; BM
+    EKF --&gt; TY
+    EKF --&gt; SI["mtk/startIdx.hpp"]
+    EKF --&gt; UT["esekfom/util.hpp"]
+
+    BM --&gt; SUB["mtk/src/SubManifold.hpp"]
+    BM --&gt; SI
+    SI --&gt; VV["mtk/src/vectview.hpp"]
+    TY --&gt; MM["mtk/src/mtkmath.hpp&lt;br/&gt;hat 等李群运算"]
+
+    MISC["so3_math.hpp / pose6d.hpp&lt;br/&gt;四元数与位姿小工具"] -. 独立工具 .-&gt; LIO</code></pre>
+<p>关键节点：<code>use_ikfom.hpp</code> 是唯一的"问题定义层"，向上把 <code>state_ikfom</code> 等类型交给 FastLIO 里程计，向下完全构建在 mtk 之上；<code>esekfom.hpp</code> 不认识具体状态，只通过模板参数和函数指针与外界交互。<code>so3_math.hpp</code> 与 <code>pose6d.hpp</code> 不参与这套流形簿记，只是配准与位姿代码顺手复用的数学小件。</p>
+<h2 id="mtk">mtk：宏展开的复合流形</h2>
+<h3 id="mtk_build_manifold"><code>MTK_BUILD_MANIFOLD</code> 做了什么</h3>
+<p><code>use_ikfom.hpp</code> 中的写法是：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">MTK_BUILD_MANIFOLD</span><span class="p">(</span><span class="n">state_ikfom</span><span class="p">,</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="p">((</span><span class="n">vect3</span><span class="p">,</span><span class="w"> </span><span class="n">pos</span><span class="p">))((</span><span class="n">SO3</span><span class="p">,</span><span class="w"> </span><span class="n">rot</span><span class="p">))((</span><span class="n">SO3</span><span class="p">,</span><span class="w"> </span><span class="n">offset_R_L_I</span><span class="p">))((</span><span class="n">vect3</span><span class="p">,</span><span class="w"> </span><span class="n">offset_T_L_I</span><span class="p">))</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="p">((</span><span class="n">vect3</span><span class="p">,</span><span class="w"> </span><span class="n">vel</span><span class="p">))((</span><span class="n">vect3</span><span class="p">,</span><span class="w"> </span><span class="n">bg</span><span class="p">))((</span><span class="n">vect3</span><span class="p">,</span><span class="w"> </span><span class="n">ba</span><span class="p">))((</span><span class="n">S2</span><span class="p">,</span><span class="w"> </span><span class="n">grav</span><span class="p">)))</span>
+</code></pre></div>
+<p>这个宏借助 Boost.Preprocessor 遍历字段序列，为每个字段生成一个 <code>MTK::SubManifold&lt;类型, IDX, DIM&gt;</code> 成员，并展开出一整套成员函数：</p>
+<ul>
+<li><code>MTK_BOXPLUS</code> / <code>MTK_OPLUS</code> / <code>MTK_BOXMINUS</code>：对每个子流形调用其 <code>boxplus/oplus/boxminus</code>，内部用 <code>MTK::subvector(__vec, &amp;self::id)</code> 按成员指针从切向量中取出属于自己的切片（由 <code>startIdx.hpp</code> 换算索引、<code>vectview.hpp</code> 提供视图）；</li>
+<li>索引注册：<code>build_S2_state()</code> / <code>build_SO3_state()</code> / <code>build_vect_state()</code> 按 <code>TYP</code> 编码把各字段登记进容器——<code>TYP==0</code> 为 vect（记 <code>(IDX, DIM)</code> 与 DOF）、<code>TYP==1</code> 为 S2、<code>TYP==2</code> 为 SO3；</li>
+<li>S2 专用分发：<code>S2_hat</code> / <code>S2_Nx_yy</code> / <code>S2_Mx</code> 按 <code>id.IDX == idx</code> 匹配目标子流形后转发。</li>
+</ul>
+<p>这套注册表是 esekfom 与 mtk 的真正接缝：滤波器在预测/更新时必须知道"哪一段协方差对应哪个流形"，尤其是 S2 这种 DOF≠DIM 的流形需要特殊映射。</p>
+<h3 id="_2">基础类型</h3>
+<ul>
+<li><code>vect&lt;N, T&gt;</code>：最简单的欧式流形，DOF=DIM=N；</li>
+<li><code>SO3&lt;T&gt;</code>：四元数存储、三维切空间；</li>
+<li><code>S2&lt;T, 98090, 10000, 1&gt;</code>：三维单位向量存储、二维切空间，模板尾参（98090/10000/1）固定了其内部数值方案与半球约定，属于类型签名的一部分，不可随意改动；</li>
+<li><code>SubManifold</code> / <code>startIdx</code> / <code>vectview</code> / <code>mtkmath</code> 是支撑设施，用户一般不直接接触，但读 <code>df_dx</code> 这类手写雅可比时会遇到 <code>MTK::hat</code>（来自 <code>mtkmath.hpp</code>）。</li>
+</ul>
+<h2 id="use_ikfomhpp-fastlio">use_ikfom.hpp：把滤波器绑定到 FastLIO 问题</h2>
+<h3 id="state_ikfom">state_ikfom 的字段与维度</h3>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>DOF</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pos</code></td>
+<td>vect3</td>
+<td>3</td>
+<td>IMU 位置</td>
+</tr>
+<tr>
+<td><code>rot</code></td>
+<td>SO3</td>
+<td>3</td>
+<td>IMU 姿态</td>
+</tr>
+<tr>
+<td><code>offset_R_L_I</code> / <code>offset_T_L_I</code></td>
+<td>SO3 / vect3</td>
+<td>3 / 3</td>
+<td>雷达→IMU 外参旋转/平移</td>
+</tr>
+<tr>
+<td><code>vel</code></td>
+<td>vect3</td>
+<td>3</td>
+<td>速度</td>
+</tr>
+<tr>
+<td><code>bg</code> / <code>ba</code></td>
+<td>vect3</td>
+<td>3 / 3</td>
+<td>陀螺/加计零偏</td>
+</tr>
+<tr>
+<td><code>grav</code></td>
+<td>S2</td>
+<td>2</td>
+<td>重力方向</td>
+</tr>
+</tbody>
+</table>
+<p>合计 <strong>DOF = 23</strong>（切空间维，即协方差维数），<strong>DIM = 24</strong>（存储维，grav 占三维）。这正是文件头注释强调 <em>"The order of fields matters because the IESKF update relies on the compiled SO3/S2 index bookkeeping"</em> 的原因：字段顺序决定 IDX 编号，进而决定注册表与手写雅可比里的所有分块位置。</p>
+<p>配套定义了 <code>input_ikfom</code>（<code>acc</code>/<code>gyro</code>）与 <code>process_noise_ikfom</code>（<code>ng</code>/<code>na</code>/<code>nbg</code>/<code>nba</code>，共 12 维），以及默认对角过程噪声 <code>process_noise_cov()</code>（ng/na 取 0.0001，nbg/nba 取 0.00001）。</p>
+<h3 id="_3">过程模型与雅可比</h3>
+<ul>
+<li><code>get_f(s, in)</code> 返回 24 维连续时间过程导数：位置导数为 <code>vel</code>，姿态导数为 <code>gyro - bg</code>，速度导数为 <code>rot * (acc - ba) + grav</code>；</li>
+<li><code>df_dx</code> 返回 24×23 矩阵，硬编码了各分块位置：速度行对位置的恒等块、<code>-rot * hat(acc - ba)</code> 与 <code>-rot</code> 块、用 <code>s.S2_Mx(grav_matrix, vec, 21)</code> 把二维重力切向映射到第 21 列起的 3×2 块、陀螺行的 <code>-I</code>；</li>
+<li><code>df_dw</code> 返回 24×12 矩阵，登记噪声进入通道。</li>
+</ul>
+<p>注意 <strong>21 这个魔法数字</strong>：它是 <code>grav</code> 的 DOF 起点（3×7 个三维字段之后）。这属于"宏生成索引"与"手写雅可比"之间的契约——改字段顺序必须同步改 <code>df_dx</code>/<code>df_dw</code> 里的所有数字。<code>SO3ToEuler</code> 是纯辅助函数，把 SO3 四元数转成角度制欧拉角（含 ±90° 俯仰的奇异分支），供日志与可视化使用。</p>
+<h2 id="esekfomesekf">esekfom::esekf：迭代误差状态滤波器</h2>
+<h3 id="_4">模板与维度约定</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">template</span><span class="w"> </span><span class="o">&lt;</span><span class="k">typename</span><span class="w"> </span><span class="nc">state</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">process_noise_dof</span><span class="p">,</span><span class="w"> </span><span class="k">typename</span><span class="w"> </span><span class="nc">input</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">state</span><span class="p">,</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">          </span><span class="k">typename</span><span class="w"> </span><span class="nc">measurement</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">state</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">measurement_noise_dof</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="o">&gt;</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="k">class</span><span class="w"> </span><span class="nc">esekf</span>
+</code></pre></div>
+<p>类内 <code>n = state::DOF</code>（23）、<code>m = state::DIM</code>（24）、<code>l = measurement::DOF</code>；协方差类型 <code>cov</code> 是 <strong>n×n（23×23）</strong>，而 <code>flatted_state</code> 是 m 维（24）——阅读时不要把两者混为一谈。默认构造 <code>P = Identity</code>；<code>USE_sparse</code> 宏默认注释关闭，打开后部分矩阵走稀疏路径（<code>spMt</code>）。文件包含 <code>&lt;omp.h&gt;</code> 与 <code>boost/bind.hpp</code>。</p>
+<h3 id="_5">六种模型注册入口</h3>
+<p><code>init</code> 系列成员函数按"观测如何表达"分为三档，再按"是否 share"分两档：</p>
+<table>
+<thead>
+<tr>
+<th>入口</th>
+<th>观测形式</th>
+<th>回调数量</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>init</code></td>
+<td>固定维流形</td>
+<td>h / h_x / h_v 三个</td>
+</tr>
+<tr>
+<td><code>init_dyn</code></td>
+<td>动态长度 Eigen 向量</td>
+<td>h_dyn / h_x_dyn / h_v_dyn</td>
+</tr>
+<tr>
+<td><code>init_dyn_runtime</code></td>
+<td>维度与类型都动态</td>
+<td>只注册 h_x / h_v</td>
+</tr>
+<tr>
+<td><code>init_share</code> / <code>init_dyn_share</code></td>
+<td>一次回调同时产出 z/h/h_x/h_v/R</td>
+<td>单个 share 回调</td>
+</tr>
+<tr>
+<td><code>init_dyn_runtime_share</code></td>
+<td>同上，运行期动态</td>
+<td>单个 share 回调</td>
+</tr>
+</tbody>
+</table>
+<p>每个入口的收尾动作完全一致：保存 <code>maximum_iter</code>、逐维拷贝收敛阈值 <code>limit[n]</code>，然后调用 <code>build_S2_state/build_SO3_state/build_vect_state</code> 编译索引簿记。</p>
+<p><code>dyn_share_datastruct</code> 是理解 FastLIO 用法的关键：它携带 <code>valid</code> 与 <code>converge</code> 两个标志位加动态尺寸的 <code>z/h/h_x/h_v/R</code>。注释明确其设计意图是"迭代更新中一次回调同时算出残差、估计、两份雅可比与噪声协方差"——对每帧点云残差数量不定、且需要按点剔除的场景（<code>valid=false</code> 丢弃该次观测），动态 share 版本是最贴合的入口。</p>
+<h3 id="predict">predict 的数据流</h3>
+<pre class="mermaid"><code>sequenceDiagram
+    participant LIO as FastLIO 主循环
+    participant EKF as esekfom::esekf
+    participant ST as state_ikfom (mtk 复合流形)
+    participant CB as h_dyn_share 观测回调
+
+    LIO-&gt;&gt;EKF: init_dyn_share(f, f_x, f_w, h_dyn_share, maximum_iter, limit)
+    EKF-&gt;&gt;ST: build_S2_state / build_SO3_state / build_vect_state
+
+    loop 每段 IMU 前向传播
+        LIO-&gt;&gt;EKF: predict(dt, Q, input)
+        EKF-&gt;&gt;ST: x_.oplus(f_, dt) 在流形上推进均值
+        EKF-&gt;&gt;EKF: 依 vect/SO3/S2 注册表散射雅可比, 维护 23x23 协方差
+    end
+
+    loop 每帧点云的迭代更新
+        LIO-&gt;&gt;EKF: 迭代更新 (受 maximum_iter 与 limit 约束)
+        EKF-&gt;&gt;CB: 传入 state 引用与 dyn_share_datastruct
+        CB--&gt;&gt;EKF: 填 z/h/h_x/h_v/R, 置 valid/converge
+        EKF-&gt;&gt;ST: 在流形上修正状态
+    end</code></pre>
+<p><code>predict(dt, Q, i_in)</code>（Q 按步传入）中可清晰看到 mtk 注册表的用途：先求 <code>f/f_x/f_w</code>，用 <code>x_.oplus(f_, dt)</code> 推进均值；随后 <code>F_x1 = Identity</code> 起步，遍历 <code>x_.vect_state</code> 把"模型侧按 DIM 排布"的雅可比块逐字段散射进 DOF 空间的 <code>f_x_final/f_w_final</code>；接着进入 SO3 分支（<code>res_temp_SO3</code>、<code>seg_SO3</code>），S2 分支同理需要 <code>S2_Mx</code>/<code>S2_Nx_yy</code> 做 3↔2 维映射。<strong>若没有 mtk 的索引簿记，滤波器无法正确处理混合流形状态的协方差传播</strong>，这就是两层库互锁的原因。</p>
+<h2 id="fastlio">与 FastLIO 里程计的调用链</h2>
+<p>从构成可见目标用法：FastLIO 里程计实现（见其专页）以 <code>state_ikfom</code> 为状态、<code>input_ikfom</code> 为输入、12 维过程噪声实例化 <code>esekf</code>，用 <code>init_dyn_share</code> 注册 <code>use_ikfom.hpp</code> 中的 <code>get_f/df_dx/df_dw</code> 与自己的观测回调；每段 IMU 调 <code>predict</code> 前向传播，每帧点云进入由 <code>maximum_iter</code> 与 <code>limit[]</code> 控制的迭代更新，观测侧点面配准依赖 ikd_tree 提供的近邻。滤波器对象本身不含任何同步设施，生命周期归属里程计的单个工作线程（与异步执行器页面的单 worker 模型衔接）。</p>
+<h2 id="_6">边界条件与阅读注意</h2>
+<ul>
+<li><strong>字段顺序敏感</strong>：<code>state_ikfom</code> 字段顺序被注释明示不可随意调换，<code>df_dx</code>/<code>df_dw</code> 中的分块下标（如 grav 的 21）与之硬耦合；</li>
+<li><strong>DOF≠DIM 只发生在 S2</strong>：协方差 23×23、接口矩阵 24×23，排查维度问题时先想到 grav；</li>
+<li><strong>收敛控制</strong>：<code>maximum_iter</code> 全局 + <code>limit[n]</code> 逐维，是迭代更新退出条件的一部分；share 回调里的 <code>converge</code> 标志也参与该判定；</li>
+<li><strong>S2 模板常量</strong>（98090/10000/1）固定数值方案，属类型签名；</li>
+<li><strong>稀疏路径默认关闭</strong>，改动前注意 <code>USE_sparse</code> 注释；</li>
+<li><strong>依赖 Boost 预处理器与 Boost.Bind</strong>，mtk 宏的可读性差，调试建议看宏展开后的语义而非宏体本身。</li>
+</ul>
+<h2 id="_7">扩展点</h2>
+<ul>
+<li><strong>新增/调整状态字段</strong>：改 <code>MTK_BUILD_MANIFOLD</code> 序列即可自动重算索引与注册表，但必须同步修订 <code>df_dx</code>/<code>df_dw</code> 的手写分块与 <code>get_f</code> 的填充位置；</li>
+<li><strong>更换观测模型</strong>：固定维传感器选 <code>init</code>，点云类变长残差选 <code>init_dyn_share</code>，运行期维度都变的场景才有必要用 runtime 系列；</li>
+<li><strong>复用 mtk 类型</strong>：<code>vect/SO3/S2</code> 可被其它估计器直接取用；对照阅读时注意 SmallPointLIO 与 SuperLIO 走的是各自自带的 ESKF/流形实现，并不共享本目录代码。</li>
+</ul>
+<p>Sources:
+- <code>src/asuka/thirdparty/fastlio/use_ikfom.hpp#L1-L124</code>
+- <code>src/asuka/thirdparty/fastlio/esekfom/esekfom.hpp#L1-L260</code>
+- <code>src/asuka/thirdparty/fastlio/esekfom/esekfom.hpp#L180-L560</code>
+- <code>src/asuka/thirdparty/fastlio/mtk/build_manifold.hpp#L1-L200</code></p>
+<h2 id="_8">关联源码</h2>
+<ul>
+<li><code>src/asuka/thirdparty/fastlio/esekfom/esekfom.hpp</code></li>
+<li><code>src/asuka/thirdparty/fastlio/use_ikfom.hpp</code></li>
+<li><code>src/asuka/thirdparty/fastlio/mtk/build_manifold.hpp</code></li>
+<li><code>src/asuka/thirdparty/fastlio/so3_math.hpp</code></li>
+</ul>
+
+
+
+
+
+
+
+  
+  
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
