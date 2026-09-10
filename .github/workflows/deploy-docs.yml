@@ -58,6 +58,13 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Build site
+        env:
+          # Mutes the static "MkDocs 2.0 is coming" banner that mkdocs-material
+          # prints on every run (material/templates/__init__.py). It is not an
+          # error and does not affect --strict; remove this line to see it again.
+          # The real protection against MkDocs 2.0 is the pinning in
+          # requirements.txt.
+          NO_MKDOCS_2_WARNING: "1"
         run: mkdocs build --strict
 
       - name: Publish to the github-page branch

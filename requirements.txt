@@ -1,3 +1,8 @@
-mkdocs>=1.4
-mkdocs-material>=9.0
-pymdown-extensions>=10.0
+# Pinned on purpose. Material for MkDocs publishes an incompatibility notice
+# about MkDocs 2.0 (plugins removed, theme overrides rewritten, no migration
+# path), so an unpinned install would one day pick up MkDocs 2.0 and break the
+# docs build in CI without any change on our side. Bump these deliberately and
+# rebuild locally before committing.
+mkdocs==1.6.1
+mkdocs-material==9.7.7
+pymdown-extensions==10.15
