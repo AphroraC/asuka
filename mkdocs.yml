@@ -1,5 +1,8 @@
 site_name: "Asuka"
 site_description: "Robust, minimal and extensible LiDAR-inertial SLAM framework"
+site_url: "https://aphrorac.github.io/asuka/"
+repo_url: "https://github.com/AphroraC/asuka"
+repo_name: "AphroraC/asuka"
 
 theme:
   name: material
@@ -92,4 +95,9 @@ nav:
       - "ankerl 高性能哈希容器": wiki/thirdparty/06.md
   - 架构总览: architecture.md
   - 核心 API: api.md
+  - smallpointlio 等价性验证: smallpointlio_parity.md
+  - "前端与扩展":
+      - "前端里程计插件": odometry.md
+      - "扩展开发指南": extend.md
+      - "内置扩展清单": extensions.md
   - FAQ: faq.md

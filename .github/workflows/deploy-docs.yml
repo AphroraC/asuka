@@ -1,0 +1,81 @@
+# Builds the MkDocs site from the `redesign` branch and publishes it to GitHub Pages.
+#
+# Pipeline
+#   1. triggers when a push to `redesign` touches docs/ (or the MkDocs config itself)
+#   2. builds the site with mkdocs (--strict, so a missing nav entry or a broken
+#      link fails the job instead of shipping a broken page)
+#   3. force-pushes the built site to the `github-page` branch as a single orphan
+#      commit -- that branch holds the *rendered* site, the sources stay on redesign
+#
+# One-time setup on GitHub (only you can do this):
+#   Settings -> Pages -> Build and deployment
+#     Source: "Deploy from a branch"
+#     Branch: github-page / (root)
+#   Settings -> Actions -> General -> Workflow permissions:
+#     "Read and write permissions" (the job also asks for `contents: write` below,
+#     but the repo-level setting can override it to read-only)
+#   The repository must be public (or the plan must allow Pages for private repos).
+#
+# The `github-page` branch is created by the first successful run; no need to
+# create it by hand.
+#
+# Alternative: replace the last step with peaceiris/actions-gh-pages@v4
+# (publish_branch: github-page, publish_dir: ./site). The steps below use plain
+# git so the workflow only depends on first-party actions.
+
+name: deploy docs
+
+on:
+  push:
+    branches: [redesign]
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - 'requirements.txt'
+      - '.github/workflows/deploy-docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-docs
+  cancel-in-progress: true
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install MkDocs
+        run: pip install -r requirements.txt
+
+      - name: Build site
+        run: mkdocs build --strict
+
+      - name: Publish to the github-page branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # keep Jekyll from dropping files it does not like
+          touch site/.nojekyll
+          cd site
+          # `git init` + `checkout -b` instead of `git init -b`: the short form
+          # needs git >= 2.28 and this keeps the script usable on older git too
+          git init -q
+          git checkout -q -b github-page
+          git add -A
+          git -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit -qm "docs: publish ${GITHUB_SHA::7}"
+          git push -q --force \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            github-page
