@@ -1,0 +1,3161 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="单 worker 从 IMU/帧两条环形缓冲按到达序交错逐条消费，互斥锁加条件变量同步；stop 幂等可重入，save 前强制 join，析构按 worker → 扩展模块 → at_exit 排序；代码注释逐条说明规避数据竞争与销毁竞态的理由，是并发正确性的核心页面。">
+      
+      
+      
+        <link rel="canonical" href="https://aphrorac.github.io/asuka/wiki/dataflow/02.html">
+      
+      
+        <link rel="prev" href="01.html">
+      
+      
+        <link rel="next" href="03.html">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>线程模型与停机时序（风险点） - Asuka</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#_1" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../index.html" title="Asuka" class="md-header__button md-logo" aria-label="Asuka" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Asuka
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              线程模型与停机时序（风险点）
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/AphroraC/asuka" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    AphroraC/asuka
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../index.html" title="Asuka" class="md-nav__button md-logo" aria-label="Asuka" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Asuka
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/AphroraC/asuka" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    AphroraC/asuka
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    首页
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    安装
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../docker.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../quickstart.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    快速上手
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../parameters.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    参数速查
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../point_type.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    点云格式
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    项目入口与运行形态
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    项目入口与运行形态
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../entry/01.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    项目总览与架构地图
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../entry/02.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ROS 节点入口 asuka_rosnode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../entry/03.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    nodelet 与 rosbag 两种运行形态
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ROS 封装与数据接入主链路
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ROS 封装与数据接入主链路
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ros/01.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AsukaROS 构造装配与模块装载
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ros/02.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IMU 接入与标定补偿
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ros/03.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    点云接入与雷达类型分发
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ros/04.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    时间戳回环检测 handle_loop_back
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ros/05.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    地图保存与退出时序（含风险点）
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    核心框架 core
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    核心框架 core
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core/01.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    里程计抽象接口与插件契约
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core/02.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    异步执行器 AsyncOdometryEstimation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core/03.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    核心公共数据类型 types.hpp
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core/04.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    全局回调定义 callbacks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core/05.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    通用预处理接口 cloud/imu preprocess
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    里程计算法实现（插件矩阵）
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    里程计算法实现（插件矩阵）
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../odometry/01.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    五种算法总览与 so_name 动态选择
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../odometry/02.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FastLIO 里程计主流程
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../odometry/03.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FastLIO IMU 预处理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../odometry/04.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FastLIO 点云预处理与插件注册
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../odometry/05.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lightning 里程计主流程
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../odometry/06.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lightning 预处理与插件注册
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../odometry/07.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    BatchLIO 里程计主流程
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../odometry/08.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    BatchLIO 数学工具与公共结构
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../odometry/09.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    BatchLIO 预处理与插件注册
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../odometry/10.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SmallPointLIO 主流程与自带 ESKF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../odometry/11.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SmallPointLIO 预处理与插件注册
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../odometry/12.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SuperLIO 里程计主流程
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../odometry/13.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SuperLIO ESKF 与流形运算
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../odometry/14.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SuperLIO 八叉体素地图与近邻结构
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../odometry/15.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SuperLIO 辅助设施与预处理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    算法功能模块 modules
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    算法功能模块 modules
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/01.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IMU 前向预测模块
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/02.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LOAM 点面优化
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/03.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Miao 图优化模块
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/04.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RViz 可视化模块
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12" >
+        
+          
+          <label class="md-nav__link" for="__nav_12" id="__nav_12_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    插件机制与基础设施 utility
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    插件机制与基础设施 utility
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../infra/01.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    dlopen 动态加载器与句柄注册表
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../infra/02.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    扩展模块机制 ExtensionModule
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../infra/03.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    配置系统与 JSON 读取
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../infra/04.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    日志系统
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../infra/05.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    回调槽 CallbackSlot
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_13" >
+        
+          
+          <label class="md-nav__link" for="__nav_13" id="__nav_13_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    配置边界
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_13">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    配置边界
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configs/01.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    全局配置层级
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configs/02.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    里程计配置变体与实现切换
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_14" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_14" id="__nav_14_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    跨模块边界与数据流
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_14_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_14">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    跨模块边界与数据流
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="01.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    端到端数据流主链路
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    线程模型与停机时序（风险点）
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="02.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    线程模型与停机时序（风险点）
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        一、线程清单与角色
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#insert" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        二、生产者路径：insert 的锁与闸门
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        三、消费者路径：loop 的锁纪律
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        四、关键状态一览
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        五、stop() 的幂等设计逐步解析
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#save-join" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        六、save() 强制 join：数据竞争点的注释还原
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#worker-at_exit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        七、析构时序：worker → 扩展模块 → at_exit
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        八、完整停机时序图
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#wait-workload-wait_idle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        九、wait / workload / wait_idle：建议性等待层
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        十、边界条件与风险清单
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        十一、扩展点
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        关联源码
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="03.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    核心状态与缓冲管理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_15" >
+        
+          
+          <label class="md-nav__link" for="__nav_15" id="__nav_15_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第三方依赖 thirdparty
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_15_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    第三方依赖 thirdparty
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../thirdparty/01.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ikd_tree 增量 KD 树
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../thirdparty/02.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    esekfom 与 mtk 流形库
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../thirdparty/03.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ivox 增量局部地图
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../thirdparty/04.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lightning 算法库
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../thirdparty/05.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    miao 图优化库
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../thirdparty/06.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ankerl 高性能哈希容器
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    架构总览
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    核心 API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../smallpointlio_parity.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    smallpointlio 等价性验证
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_19" >
+        
+          
+          <label class="md-nav__link" for="__nav_19" id="__nav_19_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    前端与扩展
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_19_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_19">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    前端与扩展
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../odometry.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    前端里程计插件
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../extend.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    扩展开发指南
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../extensions.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    内置扩展清单
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        一、线程清单与角色
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#insert" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        二、生产者路径：insert 的锁与闸门
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        三、消费者路径：loop 的锁纪律
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        四、关键状态一览
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        五、stop() 的幂等设计逐步解析
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#save-join" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        六、save() 强制 join：数据竞争点的注释还原
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#worker-at_exit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        七、析构时序：worker → 扩展模块 → at_exit
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        八、完整停机时序图
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#wait-workload-wait_idle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        九、wait / workload / wait_idle：建议性等待层
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        十、边界条件与风险清单
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        十一、扩展点
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        关联源码
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="_1">线程模型与停机时序（风险点）</h1>
+<p>本页聚焦 asuka 的并发骨架：数据在哪些线程之间流动、事件缓冲如何同步、停机为什么必须按特定顺序执行。核心结论先行：<strong><code>wait</code>/<code>wait_idle</code> 这类等待是"建议性"的，真正的并发正确性屏障是 <code>save()</code> 与析构路径里的 <code>stop()</code> + <code>join()</code></strong>。源码注释在两处（<code>asuka_ros.cpp</code> 的 <code>save()</code> 与 <code>~AsukaROS()</code>）逐条给出了这样设计的原始动机——一处规避对地图数据的数据竞争，一处规避模块销毁时的回调竞态。</p>
+<p>涉及文件：</p>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>职责</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>src/asuka/include/asuka/core/async_odometry_estimation.hpp</code></td>
+<td>异步执行器的全部并发原语声明：线程、互斥锁、条件变量、三个原子标志、两条环形缓冲</td>
+</tr>
+<tr>
+<td><code>src/asuka/src/asuka/core/async_odometry_estimation.cpp</code></td>
+<td>消费循环、插入闸门、输入槽发射、幂等 <code>stop()</code> 的实现</td>
+</tr>
+<tr>
+<td><code>src/asuka/src/asuka/asuka_ros.cpp</code></td>
+<td>上层停机编排：<code>save()</code> 强制 join、析构三段式排序</td>
+</tr>
+<tr>
+<td><code>src/asuka/apps/asuka_rosnode.cpp</code> / <code>asuka_rosbag.cpp</code></td>
+<td>两种入口各自的收尾时序（spin→wait→save / 读包→wait→save）</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_2">一、线程清单与角色</h2>
+<p>从证据可见的线程共三类：</p>
+<table>
+<thead>
+<tr>
+<th>线程</th>
+<th>角色</th>
+<th>生命周期</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>主线程（ROS spinner / rosbag 循环）</td>
+<td><strong>生产者</strong>：回调 <code>insert_imu</code>/<code>insert_frame</code> 入队；同时也是停机的发起者（<code>save</code>、析构）</td>
+<td>进程全程</td>
+</tr>
+<tr>
+<td><code>AsyncOdometryEstimation::worker</code></td>
+<td><strong>唯一消费者</strong>：按到达序逐条取走事件，发射输入槽后喂给 odometry 插件并排空计算</td>
+<td>构造函数 <code>std::thread(&amp;…::loop, this)</code> 启动，<code>stop()</code> 中 join</td>
+</tr>
+<tr>
+<td>扩展模块线程</td>
+<td>各模块私有，由各自 <code>stop()</code> 管理</td>
+<td>析构注释明确"then all module threads"，即所有模块线程必须在销毁前归零</td>
+</tr>
+</tbody>
+</table>
+<p>构造顺序上有一个隐含保证：<code>asuka_ros.cpp</code> 构造函数先 <code>OdometryEstimation::load_module</code> 装载插件、再 <code>make_unique&lt;AsyncOdometryEstimation&gt;(odometry)</code>，因此 worker 启动时 <code>odometry</code> 共享指针必然已就绪，消费循环永远不会看到空算法。</p>
+<hr />
+<h2 id="insert">二、生产者路径：insert 的锁与闸门</h2>
+<p><code>insert_imu</code>（.cpp）与 <code>insert_frame</code> 结构完全一致：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span><span class="w"> </span><span class="n">lock</span><span class="p">(</span><span class="n">mtx</span><span class="p">);</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">running</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">end_of_sequence</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="p">;</span><span class="w">   </span><span class="c1">// 闸门：停机中一律丢弃</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="n">imu_queue</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">imu</span><span class="p">);</span><span class="w">                  </span><span class="c1">// 各流入各自的环形缓冲</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="p">}</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">cv</span><span class="p">.</span><span class="n">notify_one</span><span class="p">();</span><span class="w">                             </span><span class="c1">// 锁外通知，减少惊群</span>
+</code></pre></div>
+<p>三个要点：</p>
+<ol>
+<li><strong>闸门先行</strong>：<code>running</code>（worker 存活开关）与 <code>end_of_sequence</code>（单向停机闸）任一为假即静默丢弃。这保证 <code>stop()</code> 的 exchange 与 join 之间不会有新数据溜进队列——否则 join 返回后队列里还残留未处理数据，"停机即排空"的语义就不成立。</li>
+<li><strong>notify 在锁外</strong>：入队成功后才 <code>notify_one()</code>，避免持锁唤醒带来的额外争用。</li>
+<li><strong>有界有损缓冲</strong>：<code>boost::circular_buffer</code> 两条（<code>imu_queue_capacity = 1000</code>、<code>frame_queue_capacity = 50</code>），写满时<strong>覆盖该流最旧事件</strong>而非阻塞生产者。过载时丢旧数据，绝不反压 ROS 回调线程。入口的 ROS 订阅队列（rosnode 中 IMU 1000 / 点云 50）与之容量一一对应。</li>
+</ol>
+<hr />
+<h2 id="loop">三、消费者路径：loop 的锁纪律</h2>
+<p><code>loop()</code> 把每一轮拆成"锁内短临界区 + 锁外长计算"两段：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1">// 锁内：等待 + 取出一条</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">cv</span><span class="p">.</span><span class="n">wait</span><span class="p">(</span><span class="n">lock</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="k">this</span><span class="p">]</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="o">!</span><span class="n">running</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="o">!</span><span class="n">imu_queue</span><span class="p">.</span><span class="n">empty</span><span class="p">()</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="o">!</span><span class="n">frame_queue</span><span class="p">.</span><span class="n">empty</span><span class="p">();</span><span class="w"> </span><span class="p">});</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">running</span><span class="p">)</span><span class="w"> </span><span class="k">break</span><span class="p">;</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1">// 按队首传感器时间交错取出一条（某缓冲为空则取另一条）</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="c1">// 解锁</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1">// 锁外：发射输入槽 + 喂入 + 排空</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="n">processing</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">event</span><span class="p">.</span><span class="n">imu</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span><span class="n">Callbacks</span><span class="o">::</span><span class="n">on_insert_imu</span><span class="p">(</span><span class="n">event</span><span class="p">.</span><span class="n">imu</span><span class="p">);</span><span class="w">          </span><span class="c1">// 输入槽：喂算法前统一发射</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">  </span><span class="n">odometry</span><span class="o">-&gt;</span><span class="n">insert_imu</span><span class="p">(</span><span class="n">event</span><span class="p">.</span><span class="n">imu</span><span class="p">);</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">  </span><span class="n">Callbacks</span><span class="o">::</span><span class="n">on_insert_frame</span><span class="p">(</span><span class="n">event</span><span class="p">.</span><span class="n">stamp</span><span class="p">,</span><span class="w"> </span><span class="n">event</span><span class="p">.</span><span class="n">cloud</span><span class="p">);</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">  </span><span class="n">odometry</span><span class="o">-&gt;</span><span class="n">insert_frame</span><span class="p">(</span><span class="n">event</span><span class="p">.</span><span class="n">stamp</span><span class="p">,</span><span class="w"> </span><span class="n">event</span><span class="p">.</span><span class="n">cloud</span><span class="p">);</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="p">}</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">odometry</span><span class="o">-&gt;</span><span class="n">process_once</span><span class="p">())</span><span class="w"> </span><span class="p">{}</span><span class="w">             </span><span class="c1">// 排空算法内部计算</span>
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="n">processing</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
+</code></pre></div>
+<p>设计动机：</p>
+<ul>
+<li><strong>锁内只取一条</strong>：锁竞争被压到最小，同时按队首传感器时间交错取出保证投递顺序 = 到达顺序。</li>
+<li><strong>计算绝不持锁</strong>：状态估计可能耗时数十毫秒以上，锁外执行保证生产者（ROS 回调）永远不被 worker 卡住——这对实时订阅是硬要求。</li>
+<li><strong>逐条投递</strong>：复刻上游算法假设的 ROS 回调执行器语义——每条消息一次 insert + 一次排空。批量喂入或按类型重排会改变算法内部每一步的缓冲窗口，进而改变初始化窗口、关键帧边界与初始重力估计。</li>
+<li><strong>输入槽在框架层统一发射</strong>：<code>on_insert_imu</code> / <code>on_insert_frame</code> 由执行器在喂算法之前发射，每条送达事件恰好一次（被队列丢弃的事件不会发射）——扩展观察到的输入流与所加载的前端算法无关；且三个链路槽（含 <code>on_new_frame</code>）同在 worker 线程，相对顺序即算法的程序序。</li>
+<li><strong><code>process_once()</code> 排空循环</strong>：一条数据入算法后可能产生多步内部计算，循环调用直到返回 false，保证条与条之间算法内部无残留负载。</li>
+</ul>
+<hr />
+<h2 id="_3">四、关键状态一览</h2>
+<table>
+<thead>
+<tr>
+<th>状态</th>
+<th>类型/初始值</th>
+<th>作用</th>
+<th>谁写 / 谁读</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>running</code></td>
+<td><code>atomic&lt;bool&gt;</code> / <code>true</code></td>
+<td>worker 生命周期主开关；<code>stop()</code> 中 <code>exchange(false)</code>，<strong>只有赢家负责 notify+join</strong></td>
+<td>stop 写；loop/wait 谓词读</td>
+</tr>
+<tr>
+<td><code>end_of_sequence</code></td>
+<td><code>atomic&lt;bool&gt;</code> / <code>false</code></td>
+<td>单向闸门，置位后所有 insert 丢弃；<strong>从不复位</strong>（对象一次性）</td>
+<td>stop 写；insert 读</td>
+</tr>
+<tr>
+<td><code>processing</code></td>
+<td><code>atomic&lt;bool&gt;</code> / <code>false</code></td>
+<td>worker 正在消费/排空；<code>wait_idle</code> 判定条件之一</td>
+<td>loop 锁外翻转；wait_idle 原子读</td>
+</tr>
+<tr>
+<td><code>mtx</code> + <code>cv</code></td>
+<td>mutex + condition_variable</td>
+<td>保护两条环形缓冲、唤醒 worker</td>
+<td>全体</td>
+</tr>
+<tr>
+<td><code>imu_queue</code> / <code>frame_queue</code></td>
+<td>circular_buffer（1000 / 50）</td>
+<td>双输入缓冲，按传感器时间交错取出，满覆盖最旧</td>
+<td>锁内读写</td>
+</tr>
+</tbody>
+</table>
+<p>三个标志用 <code>atomic</code> 而非锁保护，是因为它们在<strong>不持锁的路径</strong>上也被读取（<code>wait_idle</code> L47 的 <code>processing</code>、<code>stop()</code> 自身的 exchange），原子性保证了内存可见性；而队列本身只在 <code>mtx</code> 内触碰。</p>
+<hr />
+<h2 id="stop">五、stop() 的幂等设计逐步解析</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kt">void</span><span class="w"> </span><span class="nf">AsyncOdometryEstimation::stop</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="n">end_of_sequence</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span><span class="w">                    </span><span class="c1">// ① 先关闸</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">running</span><span class="p">.</span><span class="n">exchange</span><span class="p">(</span><span class="nb">false</span><span class="p">))</span><span class="w"> </span><span class="k">return</span><span class="p">;</span><span class="w">      </span><span class="c1">// ② 只有一个调用者赢</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="n">cv</span><span class="p">.</span><span class="n">notify_all</span><span class="p">();</span><span class="w">                           </span><span class="c1">// ③ 唤醒可能阻塞的 worker</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">worker</span><span class="p">.</span><span class="n">joinable</span><span class="p">())</span><span class="w"> </span><span class="n">worker</span><span class="p">.</span><span class="n">join</span><span class="p">();</span><span class="w">      </span><span class="c1">// ④ 回收线程</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="p">}</span>
+</code></pre></div>
+<p>四步各自的风险规避理由：</p>
+<ol>
+<li><strong>① 先置闸门再翻转 running</strong>：在 exchange 与 join 之间的任何并发 insert 都被拒绝，杜绝"join 期间还在入队"的窗口。</li>
+<li><strong>② <code>exchange</code> 实现幂等</strong>：<code>exchange</code> 返回旧值，只有第一次调用看到 <code>true</code> 并继续执行；后续调用直接 return。这不仅是便利——<strong>对已 join 的线程再次 join 是未定义行为</strong>，②就是唯一的防线。</li>
+<li><strong>③ <code>notify_all</code> 必要</strong>：worker 可能正停在 <code>cv.wait</code> 的睡眠里，谓词含 <code>!running</code>，唤醒后即走 break 分支。</li>
+<li><strong>④ <code>joinable()</code> 检查 + join</strong>：单次 join，之后 <code>worker</code> 永久失效。</li>
+</ol>
+<p>幂等性在代码里被真实使用了三次：<code>save()</code>（asuka_ros.cpp L124）、<code>~AsukaROS()</code>（L50）、<code>~AsyncOdometryEstimation()</code>（.cpp L13-15 转调 <code>stop()</code>）。同一对象最多经历三次 <code>stop()</code> 调用，<strong>只有第一次真正执行 join</strong>，后两次是零开销空转。这正是"save 前强制 join"与"析构再 stop"能同时写下的前提。</p>
+<hr />
+<h2 id="save-join">六、save() 强制 join：数据竞争点的注释还原</h2>
+<p><code>asuka_ros.cpp</code> L118-125 的注释是本页最重要的并发证据，逐句拆解：</p>
+<blockquote>
+<p>"workload() only reflects the input buffers, so the worker may still be inside process_scan() writing map_cloud while save() reads it (data race / heap corruption)."</p>
+</blockquote>
+<p>含义：<code>workload()</code>（含 <code>wait_idle()</code>、<code>wait(true)</code>）只是<strong>队列长度的近似</strong>。即使它显示为 0，也不能推出"现在读 <code>map_cloud</code> 是安全的"——worker 可能刚搬走一批数据正在算法内部处理、往地图里写点。若 <code>save()</code> 不停 worker 就直接调 <code>save_map()</code> 读地图，就是"一边写一边读同一份堆内存"，轻则读到脏数据，重则堆损坏。</p>
+<blockquote>
+<p>"The worker is joined here; the destructor's stop() is idempotent."</p>
+</blockquote>
+<p>解决方案：<code>save()</code> 第一行 <code>async-&gt;stop()</code> <strong>join 掉 worker</strong>。join 返回是一个硬同步点：此后不可能有任何代码再触碰 <code>map_cloud</code>，<code>save_map()</code> 才被调用。而注释同时预告了析构里还会再来一次 <code>stop()</code>——幂等设计使其安全。</p>
+<p>join 之后的落盘路径本身是单线程的：<code>odometry-&gt;save_map()</code> 取地图 → 逐点转 <code>pcl::PointXYZI</code> → 文件名按 <code>mapping_YYYYmmdd_HHMMSS.pcd</code> 生成（路径含扩展名则原样使用，否则 <code>create_directories</code> 后拼接）→ <code>savePCDFileBinary</code> 二进制落盘，<code>pcl::IOException</code> 被捕获降级为 warn 而非中断退出。</p>
+<hr />
+<h2 id="worker-at_exit">七、析构时序：worker → 扩展模块 → at_exit</h2>
+<p><code>~AsukaROS()</code>（asuka_ros.cpp L45-57）是一个三段式收尾，注释给出了完整理由：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">async</span><span class="p">)</span><span class="w"> </span><span class="n">async</span><span class="o">-&gt;</span><span class="n">stop</span><span class="p">();</span><span class="w">              </span><span class="c1">// ① 先停 odometry worker</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">ext</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">extension_modules</span><span class="p">)</span><span class="w"> </span><span class="n">ext</span><span class="o">-&gt;</span><span class="n">stop</span><span class="p">();</span><span class="w">      </span><span class="c1">// ② 再停所有模块线程</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">ext</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">extension_modules</span><span class="p">)</span><span class="w"> </span><span class="n">ext</span><span class="o">-&gt;</span><span class="n">at_exit</span><span class="p">(</span><span class="n">map_saving_path</span><span class="p">);</span><span class="w"> </span><span class="c1">// ③ 最后统一退出清理</span>
+</code></pre></div>
+<p>注释原文的逻辑链：</p>
+<blockquote>
+<p>"Stop every producer before destroying anything: the odometry worker, then all module threads. Once stop() has returned everywhere there are no in-flight slot emissions left, so the modules can unsubscribe from the callback slots and destruct without racing an emitter."</p>
+</blockquote>
+<p>即：<strong>①②都是"停生产者"</strong>——odometry worker 与各扩展模块线程都可能通过全局回调槽（callbacks / CallbackSlot，见对应页面）对外发射事件；只要还有一个线程在跑，就可能有一次"在途发射"（in-flight emission）。②全部返回后，在途发射归零，此时模块才能安全地<strong>退订回调槽并析构</strong>，不会与某个正在执行的发射方竞争。③与②刻意拆成两个循环：先让<strong>所有</strong>线程归零，才开始做任何模块的退出收尾（<code>at_exit</code> 可能触及其它模块的回调）。</p>
+<p>析构函数体执行完后，成员按声明逆序销毁；<code>async</code>（unique_ptr）析构时 <code>~AsyncOdometryEstimation</code> 再次调 <code>stop()</code>——由于 §五 的幂等性，这是第三次安全空转，不会重复 join。</p>
+<hr />
+<h2 id="_4">八、完整停机时序图</h2>
+<p>以独立节点为例（rosbag 入口的收尾序列相同，只是 wait 前多了读包背压）：</p>
+<pre class="mermaid"><code>sequenceDiagram
+    autonumber
+    participant M as main 线程
+    participant E as AsyncOdometryEstimation
+    participant W as worker(loop)
+    participant O as odometry 插件
+    participant X as 扩展模块们
+
+    M-&gt;&gt;M: ros::spin() 结束
+    M-&gt;&gt;M: wait(true): 100Hz 轮询 workload()==0（建议性）
+    M-&gt;&gt;E: stop() —— save() 第一行
+    Note over E,W: ① end_of_sequence=true 先关闸&lt;br/&gt;② running.exchange(false) 只有赢家继续
+    E-&gt;&gt;W: cv.notify_all()
+    W-&gt;&gt;W: loop 顶部谓词 !running 成立 → break
+    W--&gt;&gt;E: 线程终止
+    E-&gt;&gt;E: worker.join() 返回（硬屏障）
+    M-&gt;&gt;O: save_map()
+    M-&gt;&gt;M: 转 PointXYZI → 落盘 mapping_时间戳.pcd
+    M-&gt;&gt;E: ~AsukaROS(): async-&gt;stop() 第二次
+    Note over E: exchange 返回 false → 直接 return
+    loop 对每个扩展模块
+        M-&gt;&gt;X: ext-&gt;stop()（等在途回调发射归零）
+    end
+    loop 对每个扩展模块
+        M-&gt;&gt;X: ext-&gt;at_exit(map_saving_path)
+    end
+    Note over M,X: 全部 stop 返回后无在途发射&lt;br/&gt;退订与析构不再与发射方竞争</code></pre>
+<p><strong>关键节点解读</strong>：
+- 节点 4-9 是唯一具备"happens-before"效力的段落：<code>join()</code> 返回保证 worker 对 odometry 状态（含 <code>map_cloud</code>）的所有写操作对 main 线程可见，<code>save_map()</code> 因此安全。
+- 节点 11 展示幂等的实际收益：不早退的话，对已 join 线程重复 join 会直接是 UB。
+- 两个 <code>loop</code> 块的先后不可交换：所有 <code>stop</code> 完成前执行任何 <code>at_exit</code>，都可能撞上仍在发射的其它模块。</p>
+<p>worker 生命周期对应的状态图：</p>
+<pre class="mermaid"><code>stateDiagram-v2
+    state "Running: running=true, 接受插入" as R
+    state "Stopping: running=false, 闸门已关" as S
+    state "Joined: worker 已回收" as J
+
+    [*] --&gt; R: 构造函数 std::thread(loop)
+    R --&gt; R: 逐条取事件 → 发射输入槽 → 喂算法 → process_once 排空
+    R --&gt; S: stop(): end_of_sequence=true; exchange(false); notify_all
+    S --&gt; J: loop 顶部谓词 !running → break; join 返回
+    J --&gt; [*]: 析构中再次 stop() 直接早退
+
+    note right of S
+        此后所有 insert_imu / insert_frame
+        在锁内被闸门拒绝并丢弃
+        end_of_sequence 从不复位
+    end note</code></pre>
+<p>Running 的自环是稳态：每轮"锁内短临界区 + 锁外长计算"。Stopping→Joined 只有一条路径（谓词 <code>!running</code> 的 break 分支），不存在半停状态；<code>end_of_sequence</code> 单向性使整个状态机不可逆，即执行器对象一次性。</p>
+<hr />
+<h2 id="wait-workload-wait_idle">九、wait / workload / wait_idle：建议性等待层</h2>
+<p>这一层为上层提供"还剩多少活"的估计，但如 §六 所述，它们不是安全屏障：</p>
+<ul>
+<li><code>workload()</code>：锁内取 <code>queue.size()</code>，再加算法内部的 <code>odometry-&gt;workload()</code>。</li>
+<li><code>wait_idle()</code>（L40-50）：10ms 轮询三条件——输入队列空 &amp;&amp; <code>!processing</code> &amp;&amp; 算法负载 0。注意它<strong>不使用条件变量</strong>，是纯轮询。</li>
+<li><code>wait(true)</code>（asuka_ros.cpp L110-116）：100Hz 轮询 <code>workload()==0</code>，供 main 在 spin 结束后排空残余。</li>
+<li>rosbag 背压（asuka_rosbag.cpp L139-149）：离线回放没有实时节奏约束，读帧前以 <code>workload() &gt; 10</code> 阻流防积压失控，并带 500ms 无进展的逃生 break，避免卡死在异常停滞上。</li>
+</ul>
+<p>所有这些路径的正确性兜底最终都落在 <code>save()</code> 里那次 join 上——即使 wait 提前返回、worker 还在处理最后一批，join 也会等它做完当前批（批数据已搬到 loop 的局部 vector，cv.wait 只在下一轮顶部检查 <code>!running</code>），然后才进入 <code>save_map()</code>。</p>
+<hr />
+<h2 id="_5">十、边界条件与风险清单</h2>
+<p>从锁纪律出发可以读出的几个值得记录的点：</p>
+<ol>
+<li><strong><code>stop()</code> 全程不持 <code>mtx</code></strong>：<code>running.exchange(false)</code> 与 <code>cv.notify_all()</code> 都在锁外。若 notify 恰好落在 worker"已通过谓词检查、尚未进入阻塞"的缝隙里，且此后再无任何 notify，worker 会睡眠到永远，<code>join</code> 悬挂。该窗口极窄、实践中几乎不可达，但它是"修改条件变量关联状态应持同一把锁"这一经典规则的偏离点，审查并发代码时应知晓（修复方向：stop 中锁内置标志再 notify）。</li>
+<li><strong><code>processing</code> 在锁外翻转的瞬时窗口</strong>：批搬运 <code>unlock</code> 之后、<code>processing=true</code> 之前，队列已空、processing 尚未置位、算法负载未增长——<code>wait_idle</code>/<code>workload()</code> 可能瞬时读到"全空闲"。正如 §六，真正的安全网是 join；等待层只应作进度参考。</li>
+<li><strong>环形缓冲满覆盖最旧</strong>：过载时最老 IMU/帧被<strong>静默丢弃</strong>（<code>insert_*</code> 返回值为 void，调用方无感知）。在线运行时通常意味着算力不足正在掉历史数据，而非报错。</li>
+<li><strong><code>end_of_sequence</code> 不可逆</strong>：<code>stop()</code> 之后执行器不可复用，后续 insert 全部静默丢弃。当前生命周期（每进程一个 AsukaROS）下无害，但复用对象前必须重审此契约。</li>
+<li><strong><code>workload()</code> 中 <code>odometry-&gt;workload()</code> 在持锁状态下调用</strong>（L36-37），要求算法插件的该实现必须轻量且无内部阻塞，否则会反过来阻塞生产者——这是对插件实现的一条隐含契约。</li>
+</ol>
+<hr />
+<h2 id="_6">十一、扩展点</h2>
+<ul>
+<li><strong>新算法插件</strong>：只需正确实现 <code>workload()</code>（暴露内部积压）即可自动接入 <code>wait_idle</code> / rosbag 背压语义；无需感知线程模型——所有并发收敛在 AsyncOdometryEstimation 一层。</li>
+<li><strong>新扩展模块</strong>：必须遵守 <code>stop()</code> + <code>at_exit()</code> 双阶段协议，且契约是"stop 返回后不再有任何回调槽发射"，否则会破坏 <code>~AsukaROS</code> 的销毁安全链。</li>
+<li><strong>未来运行时热替换/卸载</strong>：<code>end_of_sequence → exchange → notify → join</code> 的停机模式与 dlopen 注册表"句柄常驻"的设计（详见 dlopen 加载器页面）是现成接缝；卸载插件前以同样序列停掉其消费者即可获得无竞态的卸载窗口。</li>
+</ul>
+<hr />
+<p>Sources: <code>src/asuka/src/asuka/core/async_odometry_estimation.cpp#L1-L86</code>, <code>src/asuka/include/asuka/core/async_odometry_estimation.hpp#L1-L45</code>, <code>src/asuka/src/asuka/asuka_ros.cpp#L1-L186</code>, <code>src/asuka/include/asuka/asuka_ros.hpp#L1-L64</code>, <code>src/asuka/apps/asuka_rosnode.cpp#L1-L33</code>, <code>src/asuka/apps/asuka_rosbag.cpp#L1-L176</code></p>
+<h2 id="_7">关联源码</h2>
+<ul>
+<li><code>src/asuka/src/asuka/core/async_odometry_estimation.cpp</code></li>
+<li><code>src/asuka/src/asuka/asuka_ros.cpp</code></li>
+</ul>
+
+
+
+
+
+
+
+  
+  
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
