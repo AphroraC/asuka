@@ -25,19 +25,19 @@ asuka 的参数系统由一个总入口 `config/config.json` 路由到各组件�
 
 | 键 | 说明 |
 |---|---|
-| `lidar_type` | `livox` 或 `robosense`，决定点云反序列化格式 |
+| `lidar_type` | `livox` 或 `robosense`；**雷达选择的唯一事实来源**——决定点云反序列化格式，也决定 config_sensor 中读取哪个块 |
 | `imu_topic` / `lidar_topic` | 订阅话题 |
 | `acc_scale` | IMU 加速度计刻度（ROS 层统一缩放） |
 | `imu_time_offset` | 加到 IMU 时间戳上的偏移（秒） |
 | `time_offset_lidar_to_imu` | 加到点云时间戳上的偏移（秒） |
-| `enable_map_saving` / `map_saving_path` | 退出时保存地图 |
+| `map_saving_path` | 退出时保存地图的路径 |
 
 ## config_sensor.json —— 传感器外参与噪声
 
 按雷达名分块（`livox` / `robosense`），包含 `extrinsic_T` / `extrinsic_R`、
-`acc_noise` / `gyro_noise` / `acc_bias` / `gyro_bias` 等。**未启用的块必须注释掉**：
-各算法按 `has("livox") -> has("robosense")` 的优先级取第一个存在的块，
-该选择与 `config_ros.json` 的 `lidar_type` 相互独立，两者务必保持一致（见 [FAQ](faq.md)）。
+`acc_noise` / `gyro_noise` / `acc_bias` / `gyro_bias` 等。各算法经
+`active_lidar_key()`（`core/sensor_config.hpp`）以 `config_ros.lidar_type` 解析出要读的块，
+**块不存在时构造期直接抛异常**；未启用块保留在文件中不会生效（建议注释掉以保持清晰）。
 
 ## odometry/config_*.json —— 前端算法
 
@@ -50,7 +50,8 @@ asuka 的参数系统由一个总入口 `config/config.json` 路由到各组件�
                   "max_iteration": 3, "laser_point_cov": 0.001 },
   "preprocess": { "min_distance": 0.5, "max_distance": 100.0,
                   "point_filter_num": 3, "scan_line": 4, "scan_rate": 10 },
-  "mapping":    { "gravity_estimation": true, "fov_degree": 360 },
+  "mapping":    { "gravity_estimation": true, "fov_degree": 360,
+                  "enable_map_saving": true },
   "filter":     { "filter_size_surf": 0.15, "filter_size_map": 0.25,
                   "cube_side_length": 1000 }
 }
@@ -58,7 +59,10 @@ asuka 的参数系统由一个总入口 `config/config.json` 路由到各组件�
 
 - `so_name`：要 `dlopen` 的里程计插件名；
 - 其余键按模块分组（`odometry` / `preprocess` / `mapping` / `filter`），
-  各算法文件内容不同（如 batchlio 有 `mapping.ivox_grid_resolution` 等），以文件内为准。
+  各算法文件内容不同（如 batchlio 有 `mapping.ivox_grid_resolution` 等），以文件内为准；
+- `mapping.enable_map_saving`（fastlio / batchlio / superlio）：是否产出可保存的地图——
+  fastlio 在 `save_map()` 被调用时把 ikd-tree 现场导出，batchlio / superlio 在运行期累积
+  地图；lightning 始终导出其全局地图，smallpointlio 目前不产出地图；
 - 缺失的键回退到各算法内置默认值并记录 warning；关键参数建议用 `param_cast` 显式失败。
 
 ## config_extensions.json —— 扩展

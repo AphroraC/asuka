@@ -25,15 +25,19 @@ struct KeyFrame {
 
 ## 全局回调插槽
 
-`asuka::Callbacks`（定义于 `asuka_core` 的 .cpp，保证跨 .so 单实例）提供五个插槽：
+`asuka::Callbacks`（定义于 `asuka_core` 的 .cpp，保证跨 .so 单实例）提供五个插槽。
+每个槽的发射者、线程、顺序与丢弃语义以 `core/callbacks.hpp` 的注释为准：
 
-| 插槽 | 签名 | 发射时机 |
+| 插槽 | 签名 | 发射者与时机 |
 |---|---|---|
-| `on_insert_imu` | `(const ImuData::ConstPtr&)` | 前端 worker 喂入每个 IMU 样本时 |
-| `on_insert_frame` | `(double, const PointCloudT::ConstPtr&)` | 喂入每帧点云时 |
-| `on_new_frame` | `(const KeyFrame::ConstPtr&)` | 前端产出关键帧时 |
-| `on_odometry_imu` | `(const KeyFrame::ConstPtr&)` | imu_prediction 产出高频预测时 |
-| `on_odometry_opt` | `(const KeyFrame::ConstPtr&)` | 后端产出优化位姿时 |
+| `on_insert_imu` | `(const ImuData::ConstPtr&)` | `AsyncOdometryEstimation` 在 worker 线程上、把样本喂给算法之前（每条送达事件恰好一次） |
+| `on_insert_frame` | `(double, const PointCloudT::ConstPtr&)` | 同上，针对点云帧 |
+| `on_new_frame` | `(const KeyFrame::ConstPtr&)` | 前端算法在 worker 线程产出关键帧时 |
+| `on_odometry_imu` | `(const KeyFrame::ConstPtr&)` | imu_prediction 在自己的处理线程上按 IMU 频率发射 |
+| `on_odometry_opt` | `(const KeyFrame::ConstPtr&)` | 后端优化扩展在发布线程上按配置频率发射 |
+
+三个"链路槽"（前两行 + `on_new_frame`）共用前端 worker 线程，相对顺序即算法的程序序；
+后两个是纯位姿帧（`id = -1`、无点云），用于轨迹输出。
 
 `CallbackSlot` 采用 copy-on-write 快照：发射路径无锁无分配，`add()` 返回的整数 id 用于
 `remove()`；观察者异常被逐个捕获并记录，不会中断发射线程。**回调在发射者线程同步执行**

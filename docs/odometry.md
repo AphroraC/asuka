@@ -1,3 +1,7 @@
+> **变更提示（2026-09）**：`smallpointlio` 的 `CloudPreprocess` 已退化为纯格式转换（tag 过滤 + 时间偏移），
+> 上游 `Preprocess` 的抽稀/距离过滤/降采样与 dense 分离逻辑下沉到算法的 `insert_frame`（worker 线程），
+> 原因是关键帧点云所需的 dense 全量点集只有算法侧能拿到。其他算法的 `CloudPreprocess` 未变。
+> 详见 `docs/smallpointlio_parity.md` 第 2.3 节。
 # Odometry plugins
 
 ## 插件机制
@@ -20,13 +24,13 @@ extern "C" asuka::OdometryEstimation* create_odometry_estimation();
 | `insert_frame(double stamp, const PointCloudT::ConstPtr&)` | 追加预处理后的帧 |
 | `process_once()` | 处理一个同步单元；有输出返回 true |
 | `workload()` | 待处理帧数（背压与退出判断依据） |
-| `stop()` / `clear_buffers()` | 清空内部缓冲（**当前框架未调用 clear_buffers，见 FAQ**） |
-| `save_map()` | 返回累积地图（调用前必须先停止 worker） |
+| `stop()` | 清空内部缓冲（析构链路调用） |
+| `save_map()` | 返回地图（调用前必须先停止 worker）：fastlio 从 ikd-tree 现场导出（受 `mapping.enable_map_saving` 门控），batchlio/superlio 返回运行期累积地图，lightning 导出其全局地图，smallpointlio 返回空 |
 | `cloud_preprocess()` | 返回算法专属的 `CloudPreprocess`，由 AsukaROS 持有并在 ROS 线程调用 |
-| `requires_imu()` | 是否依赖 IMU |
 
 关键帧输出：`process_once` 内部构造 `KeyFrame` 并调用 `Callbacks::on_new_frame`，
-不做轮询导出。
+不做轮询导出。**输入槽 `on_insert_imu` / `on_insert_frame` 由 `AsyncOdometryEstimation`
+在喂算法之前统一发射，算法不应（也无需）自行触发**——契约见 `core/callbacks.hpp` 注释。
 
 ## 内置算法
 

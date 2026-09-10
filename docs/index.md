@@ -49,8 +49,9 @@ asuka::OdometryEstimation   <== dlopen ==   libasuka_odometry_*.so
    应用 `acc_scale` / `imu_time_offset` 后进入异步队列；
 4. 点云消息按 `lidar_type` 转换为 `LivoxPoint` / `RobosensePoint`，经 `asuka::CloudPreprocess`
    （近/远距离滤除、抽稀）生成 `PointCloudT` 后入队；
-5. 前端 worker 批量取出数据喂给里程计，里程计计算结果以 `KeyFrame` 通过
-   `Callbacks::on_new_frame` 分享，扩展模块据此进行可视化、IMU 插帧与后端优化。
+5. 前端 worker 按到达序逐条取出数据，先发射 `on_insert_imu` / `on_insert_frame`
+   再喂给里程计；里程计计算结果以 `KeyFrame` 通过 `Callbacks::on_new_frame`
+   分享，扩展模块据此进行可视化、IMU 插帧与后端优化。
 
 ## 文档
 

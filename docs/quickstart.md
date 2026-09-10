@@ -46,7 +46,9 @@ TF（`world -> imu`）默认由 `imu_prediction` 的高频流发布；未加载 
 
 ## 地图保存
 
-进程退出前自动保存（`config_ros.json` 的 `enable_map_saving` / `map_saving_path`）：
+进程退出前自动保存（`map_saving_path` 在 `config_ros.json`；是否产出地图由所选算法的
+odometry json 控制，如 fastlio / batchlio / superlio 的 `mapping.enable_map_saving`，
+lightning 始终导出其全局地图，smallpointlio 目前不产出地图）：
 
 - 路径无扩展名 → 写入 `<path>/mapping_<时间戳>.pcd`；
 - 路径带 `.pcd` 扩展名 → 按指定文件名写入；
