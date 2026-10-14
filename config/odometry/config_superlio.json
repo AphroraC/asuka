@@ -1,0 +1,85 @@
+{
+  "odometry": {
+    "so_name": "libasuka_odometry_superlio.so",
+    "imu_buffer_capacity": 1000,
+    "lidar_buffer_capacity": 50
+  },
+  "kf": {
+    "max_iterations": 4,
+    "align_gravity": true,
+    "quit_eps": 0.001
+  },
+  "imu": {
+    "gravity_norm": 9.7946,
+    "imu_na": 0.1,
+    "imu_ng": 0.1,
+    "imu_nba": 0.0001,
+    "imu_nbg": 0.0001
+  },
+  "hash_map": {
+    "hash_capacity": 100000000,  // hesai.yaml baseline (was 2e6 = r3live value; 2e6 evicts LRU entries much earlier)
+    "vox_resolution": 0.5
+  },
+  "preprocess": {
+    "min_distance": 2.0,
+    "max_distance": 150.0,  // hesai.yaml baseline (was 60.0; 60 m hard-truncated far returns)
+    "filter_rate": 3,
+    "enable_downsample": true,
+    "voxel_filter_size": 0.5
+  },
+  "extrinsic": {
+    "odom_robo": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "eva": {
+    "timer": true
+  },
+  "sensor": {
+    "extrinsic_T": [
+      -0.011,
+      -0.02329,
+      0.04412
+    ],
+    "extrinsic_R": [
+      1,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      1
+    ],
+    "gyro_noise": [
+      0.1,
+      0.1,
+      0.1
+    ],
+    "acc_noise": [
+      0.1,
+      0.1,
+      0.1
+    ],
+    "gyro_bias": [
+      0.0001,
+      0.0001,
+      0.0001
+    ],
+    "acc_bias": [
+      0.0001,
+      0.0001,
+      0.0001
+    ],
+    "gyr_cov": 0.1,
+    "acc_cov": 0.1,
+    "b_gyr_cov": 0.0001,
+    "b_acc_cov": 0.0001
+  }
+}

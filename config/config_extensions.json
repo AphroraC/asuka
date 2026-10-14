@@ -1,0 +1,105 @@
+{
+  "extensions": {
+    "loading_extension_modules": [
+      "libasuka_rviz_viewer.so",
+      "// \"libasuka_freedom_viewer.so\" (enable together with libasuka_freedom.so)"
+    ]
+  },
+  "rviz_viewer": {
+    "world_frame_id": "camera_init",
+    "imu_frame_id": "body",
+    "publish_odometry": true,
+    "publish_odometry_imu": true,
+    "publish_odometry_opt": true,
+    "publish_cloud_imu": true,
+    "publish_cloud_world": true,
+    "publish_tf": true
+  },
+  "imu_prediction": {
+    "gravity": 9.81
+  },
+  "optimization_loam": {
+    "keyframe_meter_gap": 2.0,
+    "keyframe_deg_gap": 10.0,
+    "sc_dist_thres": 0.2,
+    "sc_max_radius": 80.0,
+    "history_keyframe_search_radius": 10.0,
+    "history_keyframe_search_time_diff": 30.0,
+    "history_keyframe_search_num": 25,
+    "loop_noise_score": 0.5,
+    "graph_update_times": 2,
+    "loop_fitness_score_threshold": 0.3,
+    "loop_closure_frequency": 2.0,
+    "graph_update_frequency": 1.0,
+    "vizmap_frequency": 0.1,
+    "publish_rate": 10.0,
+    "mapviz_filter_size": 0.4
+  },
+  "freedom": {
+    "enable_map_saving": true,
+    "map_saving_path": "/share/pointclouds",
+    "num_threads": 8,
+    "sensor": {
+      "min_range": 0.3,
+      "max_range": 80.0,
+      "min_z": -20.0,
+      "max_z": 20.0
+    },
+    "map": {
+      "sub_voxel_size": 0.1,
+      "voxel_depth": 2,
+      "block_depth": 5,
+      "enable_local_map": false,
+      "local_map_range": 50.0,
+      "local_map_min_z": -20.0,
+      "local_map_max_z": 20.0,
+      "raycast_max_range": 80.0,
+      "raycast_min_z": -10.0,
+      "raycast_max_z": 10.0,
+      "counts_to_free": 6,
+      "counts_to_revert": 20,
+      "conservative_connectivity": 26,
+      "aggressive_connectivity": 124
+    },
+    "raycast_enhancement": {
+      "enable_raycast_enhancement": true,
+      "lidar_horizon_fov_degree": 360.0,
+      "lidar_vertical_fov_upper_degree": 16.0,
+      "lidar_vertical_fov_lower_degree": -54.4,
+      "depth_image_vertical_lines": 64,
+      "depth_image_min_range": 0.2,
+      "max_raycast_enhancement_range": 80.0,
+      "raycast_enhancement_depth_margin": 0.2,
+      "inpaint_size": 3,
+      "erosion_size": 0,
+      "min_raycast_enhancement_area": 0.0,
+      "depth_image_top_margin": 0,
+      "learn_fov": false,
+      "enable_fov_mask": false,
+      "fov_mask_path": ""
+    },
+    "publish": {
+      "scan_blocks": false,
+      "scan_voxels": true,
+      "clusters": false,
+      "depth_image": true,
+      "enhanced_depth_image": true,
+      "enhanced_pointcloud": true,
+      "raycasted_blocks": false,
+      "raycasted_voxels": false,
+      "free_blocks": false,
+      "free_voxels": false,
+      "static_blocks": false,
+      "static_voxels": false,
+      "static_subvoxels": false,
+      "static_pointcloud": true,
+      "scan_map_range": false,
+      "raycast_range": false,
+      "local_map_range": false
+    }
+  },
+  "freedom_viewer": {
+    "world_frame_id": "camera_init",
+    "topic_prefix": "/asuka/freedom"
+  }
+}
