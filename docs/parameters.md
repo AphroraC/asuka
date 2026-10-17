@@ -37,10 +37,11 @@ asuka 的参数系统由一个总入口 `config/config.json` 路由到各组件�
 | `enable_map_saving` | 是否保存地图（对全部六前端统一门控） |
 | `map_saving_path` | 退出时保存地图的路径 |
 
-!!! warning "config_odometry × lidar_type 组合"
-    两者是独立开关：路由到仅支持 PointCloud2/CustomMsg 之一的前端而格式不匹配时，
-    帧会被前端预处理拒绝并打出节流告警（`lidar frames dropped ...`）。当前 CustomMsg
-    仅 fastlivo 消费，其余五前端请用 `livox` / `robosense`。
+!!! warning "lidar_type × 数据实际格式"
+    `lidar_type` 决定 ROS 层的反序列化路径，必须与数据实际格式一致——六前端均已实现
+    `livox` / `livox_custom` / `robosense` 三种格式的预处理重载，无需按前端挑选。
+    格式不符（如把 CustomMsg 话题配成 `robosense`）或点字段缺失时，帧会被预处理
+    拒绝并打出节流告警（`lidar frames dropped ...`）。
 
 ## odometry/config_*.json —— 前端算法（含各自的传感器外参）
 
@@ -86,7 +87,7 @@ TUM 七元），仅 LIVO 模式消费。
 ## config_extensions.json —— 扩展
 
 `extensions.loading_extension_modules` 列出要加载的扩展动态库（顺序即加载顺序），
-其余顶层键是各扩展自己的参数（`rviz_viewer` / `imu_prediction` / `freedom` /
+其余顶层键是各扩展自己的参数（`rviz_viewer` / `imu_prediction` /
 `optimization_loam`），详见 [内置扩展](extensions.md)。
 
 ## 日志
@@ -99,7 +100,7 @@ TUM 七元），仅 LIVO 模式消费。
 ## 代码中的读取方式
 
 ```cpp
-const Config config(GlobalConfig::get_config_path("config_extensions"));
+const Config config = load_config("config_extensions");
 world_frame_id = config.param<std::string>("rviz_viewer", "world_frame_id", "world");
 so_name        = odometry_config.param_cast<std::string>("odometry", "so_name");
 ```

@@ -8,22 +8,21 @@ asuka 的开发与运行均在 docker 容器内进行；**宿主机不做任何�
 docker exec -it dynamicx bash
 ```
 
-容器内以 root 运行，工作空间挂载于 `/share/pilot_ws`：
+容器内以 root 运行，工作空间挂载于 `/share/mapping_ws`：
 
 ```
-/share/pilot_ws
+/share/mapping_ws
 ├── src/asuka        # 算法库包（本项目主体）
 ├── src/asuka_ros    # ROS 适配包（入口 / rviz_viewer / launch）
-├── src/fastlio      # 原版 FAST-LIO（上游对照基准）
+├── src/nagisa,only  # 同仓其他算法包（感知滤除链 / GLIL 定位，与 asuka 无构建依赖）
 ├── test/...         # 各上游算法原始实现（迁移对照用）
-├── build / devel    # catkin_tools 工作空间
-└── AGENTS.md        # 环境约定
+└── build / devel    # catkin_tools 工作空间
 ```
 
 ## 容器内构建与运行
 
 ```bash
-cd /share/pilot_ws
+cd /share/mapping_ws
 source /opt/ros/noetic/setup.bash
 catkin build asuka asuka_ros --cmake-args -DBUILD_OPTIMIZATION_MODULES=ON
 source devel/setup.bash

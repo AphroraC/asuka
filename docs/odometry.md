@@ -115,9 +115,10 @@ asuka 的事件驱动 `process_once()` 等价替代。
   图像缓冲（上游 UB），已加边界守卫跳过越界采样。
 - **rgb 输出通路**（LIVO 模式）：VIO 更新时对 KeyFrame 云做投影取色的**新鲜副本**
   （LIO 帧已共享不可变；且 LIVO 下 LIO 更新不发云——对齐上游"彩色云仅随 VIO 更新发布"
-  的可见行为），rviz 的 /asuka/points 与 /asuka/world 均带 rgb 字段与真实颜色
-  （视场外点如实不着色，hku.bag 约 60% 在视场内）；保存 PCD 为
-  `x y z intensity rgb` 且 99%+ 点带真实 rgb（hku.bag 实测 11.36M 点）。
+  的可见行为）；保存 PCD 为 `x y z intensity rgb` 且 99%+ 点带真实 rgb
+  （hku.bag 实测 11.36M 点，视场外点如实不着色、约 60% 在视场内）。注意 rviz 话题
+  （/asuka/points、/asuka/world）固定按 `pcl::PointXYZI` 四字段发布、不带 rgb——
+  rgb 仅体现在保存的 PCD。
   ONLY_LIO 模式无图像可着色，rgb=0 与上游强度输出语义一致。
 
 - **garden.bag** 同为 CustomMsg+图像素材，可作扩展回归基线。

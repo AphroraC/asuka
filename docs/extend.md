@@ -11,12 +11,12 @@
 ```cpp
 struct KeyFrame {
   long id;                                  // 前端关键帧序号（预测/优化帧为 -1）
-  double stamp;                             // 帧时间戳（首点或末点，由算法决定）
+  double stamp;                             // 产生该关键帧的传感器扫描起始时刻（契约见 callbacks.hpp）
   FrameId frame_id;                         // FrameId::IMU
   Eigen::Isometry3d T_world_imu;            // 位姿
   Eigen::Vector3d v_world_imu;              // 世界系速度
   Eigen::Matrix<double, 6, 1> imu_bias;     // [gyro_bias, acc_bias]
-  PointCloudT::Ptr cloud_imu;               // 去畸变点云（IMU 系，帧独有副本）
+  PointCloudT::ConstPtr cloud_imu;          // 去畸变点云（IMU 系，逐帧新分配；发射后不可变）
 };
 ```
 
@@ -26,7 +26,7 @@ struct KeyFrame {
 ## 全局回调插槽
 
 `asuka::Callbacks`（定义于 `asuka_core` 的 .cpp，保证跨 .so 单实例）提供六个核心插槽；
-扩展可按 FreedomCallbacks 模式自持私有槽（见表格后说明）。
+扩展可自持私有槽（见本节末说明）。
 每个槽的发射者、线程、顺序与丢弃语义以 `core/callbacks.hpp` 的注释为准：
 
 | 插槽 | 签名 | 发射者与时机 |
@@ -38,14 +38,15 @@ struct KeyFrame {
 | `on_odometry_imu` | `(const KeyFrame::ConstPtr&)` | imu_prediction 在自己的处理线程上按 IMU 频率发射 |
 | `on_odometry_opt` | `(const KeyFrame::ConstPtr&)` | 后端优化扩展在发布线程上按配置频率发射 |
 
-FreeDOM 去除管线的三个插槽 `on_freedom_scan_removal` / `on_freedom_raycast_enhancement` /
-`on_freedom_map_removal` **由 freedom 扩展自持**（`asuka::FreedomCallbacks`，静态对象定义在
-`libasuka_freedom.so` 内，跨 .so 单实例靠 DT_NEEDED soname 去重；见
-`modules/freedom/freedom_callbacks.hpp`），由 freedom 处理线程逐阶段同步快照发射。
-第三方扩展需要点对点流时照此模式自持槽，无需改动 core。
+扩展私有的点对点流不需要动 core：在自己的头文件里声明一个槽结构体，把静态槽对象
+定义在扩展自己的 .so 的一个 .cpp 里（**不可** inline 定义在头文件，否则每个 .so 各得
+一份实例、回调静默失联），消费者直接链接该 .so——跨 .so 单实例靠 DT_NEEDED soname
+去重，动态加载器会把重复加载折叠到首份映射。
 
 四个"链路槽"（三个输入槽 + `on_new_frame`）共用前端 worker 线程，相对顺序即算法的
-程序序；后两个是纯位姿帧（`id = -1`、无点云），用于轨迹输出。
+程序序；后两个是纯位姿帧（`id = -1`、无点云、无 bias），用于轨迹输出。
+`on_new_frame` 上的帧 `id >= 0`（`id = -1` 且带点云的帧仅 smallpointlio 的 dense
+窗口一例，见 `callbacks.hpp` 契约注记）。
 
 `CallbackSlot` 采用 copy-on-write 快照：发射路径无锁无分配，`add()` 返回的整数 id 用于
 `remove()`；观察者异常被逐个捕获并记录，不会中断发射线程。**回调在发射者线程同步执行**
@@ -64,17 +65,15 @@ class MyExtension : public ExtensionModule {
 public:
   MyExtension() {
     logger = create_module_logger("myext");
-    const Config config(GlobalConfig::get_config_path("config_extensions"));
+    const Config config = load_config("config_extensions");
     param_ = config.param<double>("my_extension", "param", 1.0);
 
-    id_ = Callbacks::on_new_frame.add(
+    on_new_frame_sub = Callbacks::on_new_frame.subscribe(
         [this](const KeyFrame::ConstPtr& frame) { on_new_frame(frame); });
     // 自己开线程的模块：在这里启动
   }
 
-  ~MyExtension() override {
-    Callbacks::on_new_frame.remove(id_);   // 析构时退订
-  }
+  ~MyExtension() override = default;       // RAII 订阅析构自动退订
 
   void stop() override {                   // 必须：join 自有线程，幂等
     // if (thread_.joinable()) thread_.join();
@@ -85,7 +84,7 @@ private:
     // 只做轻活 / 入队
   }
 
-  int id_{-1};
+  CallbackSubscription<void(const KeyFrame::ConstPtr&)> on_new_frame_sub;
   double param_{1.0};
   std::shared_ptr<spdlog::logger> logger;
 };
@@ -120,8 +119,10 @@ target_link_libraries(asuka_my_extension asuka_core)
 
 !!! warning "生命周期与线程安全"
     框架析构顺序为：停止前端 worker -> 逐个调用扩展的 `stop()` -> `at_exit()` ->
-    析构（析构中退订回调）。**扩展必须在自己的 `stop()` 中 join 所有会发射回调或访问
-    共享状态的线程**（默认实现为空，注意覆写）；`stop()` 之后不得再有槽发射。
+    析构（RAII 订阅析构退订）。**扩展必须在自己的 `stop()` 中 join 所有会发射回调或
+    访问共享状态的线程**（默认实现为空，注意覆写）；`stop()` 之后不得再有槽发射。
+    带处理线程的模块请把订阅成员声明在线程成员**之前**（成员逆序析构 = 先 join
+    线程后退订，保证退订时无在途发射）。
 
 !!! note "不用动态加载时"
     也可以像 `apps/` 一样直接在入口代码中持有模块实例，绕过 `dlopen`；

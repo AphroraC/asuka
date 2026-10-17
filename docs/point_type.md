@@ -9,8 +9,8 @@
 struct EIGEN_ALIGN16 PointXYZITRGB {
   PCL_ADD_POINT4D;       // x y z (+16 字节对齐垫)
   float intensity;       // 回波强度（透传给可视化 / 存图）
-  float curvature;       // 点时刻相对扫描时间基准的毫秒偏移（FAST-LIO 系惯例字段）
   PCL_ADD_RGB;           // rgb 联合体（LIVO 前端填色；LIO 前端恒 0）
+  float curvature;       // 点时刻相对扫描时间基准的毫秒偏移（FAST-LIO 系惯例字段）
 };
 static_assert(sizeof(PointXYZITRGB) == 32);
 ```
@@ -49,8 +49,9 @@ intensity 的**值**不参与任何算法的估计数学，仅透传到 `KeyFram
 暂存槽（`normvec->intensity = 平面距离`，随后在观测模型中读回），属于 FAST-LIO2 家族的
 实现惯例，请勿向该字段写入其他数据。
 
-rgb 仅由 fastlivo / srlivo 在视觉更新时填真实颜色，LIO 前端恒 0。rviz 输出经
-`DisplayPoint` 带 rgb 字段，地图 PCD 为 `x y z intensity rgb`。
+rgb 仅由 fastlivo / srlivo 在视觉更新时填真实颜色，LIO 前端恒 0。rviz 话题输出经
+`DisplayPoint`（`pcl::PointXYZI`，四字段、不带 rgb）降维发布，地图 PCD 为
+`x y z intensity rgb`。
 
 ## 与 ROS 消息的边界
 

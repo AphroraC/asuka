@@ -41,8 +41,8 @@ Nodelet 使用独立的 `ros::CallbackQueue` 与单线程 `AsyncSpinner`，适�
 | `/asuka/odometry` | `nav_msgs/Odometry` | 前端里程计（每次 EKF 更新 / 每关键帧） |
 | `/asuka/odometry_imu` | `nav_msgs/Odometry` | IMU 插帧高频里程计（需加载 `imu_prediction`） |
 | `/asuka/odometry_opt` | `nav_msgs/Odometry` | 后端优化后里程计（需加载优化扩展） |
-| `/asuka/points` | `sensor_msgs/PointCloud2` | 当前帧去畸变点云（IMU 系；fastlivo LIVO 模式下带 rgb） |
-| `/asuka/world` | `sensor_msgs/PointCloud2` | 世界系点云（同上） |
+| `/asuka/points` | `sensor_msgs/PointCloud2` | 当前帧去畸变点云（IMU 系） |
+| `/asuka/world` | `sensor_msgs/PointCloud2` | 世界系点云 |
 
 图像订阅由 `config_ros.json` 的 `image_topic` 控制（非空时订阅），
 供 fastlivo LIVO 模式等视觉前端消费。

@@ -31,36 +31,6 @@
 
 实现细节：独立的处理线程 + 4096 深队列；锚点超前到达的样本（如 rosbag 全速回放）经
 `pending_imus` 缓冲按时间序补积分。
-## freedom（`libasuka_freedom.so`）
-
-FreeDOM（RA-L 2025）动态物去除管线的 ROS-free 移植。**前端无关**：消费 `on_new_frame`
-的（去畸变 IMU 系点云 + 前端位姿）二元组——该输入契约对任何前端成立，因此对六种前端
-通用。三个阶段（扫描去除 → raycast 增强 → 地图去除）在模块自己的处理线程上依次运行，
-并经 `on_freedom_scan_removal` / `on_freedom_raycast_enhancement` /
-`on_freedom_map_removal` 三个插槽发布阶段结果——这三个插槽由本扩展**自持**
-（`asuka::FreedomCallbacks`，静态对象定义于 `libasuka_freedom.so`，见
-[扩展开发](extend.md)），不占用 core 的 `asuka::Callbacks` 总线。模块本身保持
-ROS-free：**插槽是唯一 的对外接口**，ROS 侧消费方为 freedom_viewer 扩展（见下节）。`publish` 开关块逐流
-控制结果生成——关闭的流在 payload 中为 null 字段。静态地图在 `at_exit()` 落盘
-（`enable_map_saving` / `map_saving_path`）。
-
-| 参数块 | 内容 |
-|---|---|
-| `sensor` | `min_range` / `max_range` / z 带过滤 |
-| `map` | `sub_voxel_size`、`voxel_depth` / `block_depth`、局部地图开关与范围、raycast 范围与 z 带、`counts_to_free` / `counts_to_revert`、保守/激进连通性 |
-| `raycast_enhancement` | 深度图线数与 FOV、增强范围、深度 margin、inpaint / erosion、FOV mask |
-| `publish` | 各阶段话题逐个开关 |
-| 其他 | `num_threads`、`enable_map_saving` / `map_saving_path` |
-
-## freedom_viewer（`libasuka_freedom_viewer.so`，asuka_ros 包）
-
-freedom 结果流的 ROS 发布器：订阅三个 `on_freedom_*` 插槽，把 payload 转成
-`/asuka/freedom/*` 话题（14 个点云 + 2 张深度图 + 3 个 range box marker）。回调仅
-入队，序列化与发布在自有处理线程上完成；payload 中为 null 的字段（对应 freedom
-`publish` 块关闭的流）直接跳过。**使用方式**：与 `libasuka_freedom.so` 一起加入
-`loading_extension_modules`。参数块 `freedom_viewer`：`world_frame_id`（默认
-camera_init）、`topic_prefix`（默认 /asuka/freedom）。
-
 
 ## optimization_loam（`libasuka_optimization_loam.so`，需 `BUILD_OPTIMIZATION_MODULES=ON`）
 

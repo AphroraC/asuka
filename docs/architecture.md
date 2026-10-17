@@ -4,7 +4,7 @@
 
 | 包 | 内容 |
 |---|---|
-| `asuka` | `asuka_core`（配置/日志/回调槽/执行器/插件加载）、六前端插件、`imu_prediction`/`freedom` 与优化扩展、`config/`、`thirdparty/`。无 ROS 依赖（catkin 环境下以无组件包形式导出，亦可独立 CMake 安装） |
+| `asuka` | `asuka_core`（配置/日志/回调槽/执行器/插件加载）、六前端插件、`imu_prediction` 与优化扩展、`config/`、`thirdparty/`。无 ROS 依赖（catkin 环境下以无组件包形式导出，亦可独立 CMake 安装） |
 | `asuka_ros` | `AsukaROS` 适配层、`rviz_viewer` 扩展、三个入口 app、launch、nodelet_plugins.xml。全仓唯一链接 catkin 的包 |
 
 ## 分层与线程模型
@@ -12,21 +12,20 @@
 | 层 | 代码 | 线程 |
 |---|---|---|
 | ROS 入口 | `asuka_ros/apps/asuka_{rosnode,rosbag,nodelet}.cpp` | ROS spinner（nodelet 为独立 callback queue + 1 线程 AsyncSpinner） |
-
-> 算法私有的 vendored 头（fastlio/ikd_tree/batchlio 的 esekfom+mtk、faster_ivox、small_ivox、
-> superlio/tsl 等）已归位到各前端的 `include/asuka/odometry/<前端>/` 下（含 `asuka_ikd_tree`
-> 静态库源码）；`thirdparty/` 仅保留跨模块共享件（ankerl/livox_ros_driver 生成头/
-> nlohmann/scancontext/sophus/vikit）。
 | ROS 层 | `asuka_ros/src/asuka_ros/asuka_ros.cpp` | spinner 线程：消息转换、时间/刻度校正、**点云预处理**、回绕检测 |
 | 异步执行器 | `asuka/core/async_odometry_estimation.cpp` | 前端 worker：按传感器时间归并逐条取出事件 -> 发射输入槽 -> `insert_imu` / `insert_frame` / `insert_image` -> `process_once` 排空；事件级异常边界（log+skip），连续 10 次失败熔断有序停机（`is_stopped()` 可查） |
 | 前端插件 | `asuka/odometry/*/` | 仅前端 worker 访问算法状态（缓冲入队加锁） |
-| 扩展 | `imu_prediction` / `freedom` / 优化扩展在 `asuka`；`rviz_viewer` 在 `asuka_ros` | 各自线程（一律"回调只入队"） |
+| 扩展 | `imu_prediction` / 优化扩展在 `asuka`；`rviz_viewer` 在 `asuka_ros` | 各自线程（一律"回调只入队"） |
 
-`AsyncOdometryEstimation`：三条有界环形缓冲——IMU（1000）/ 帧（50）/ 图像（50，
-），满则丢该流最旧；worker 按队首传感器时间三路归并逐条取出
+> 算法私有的 vendored 头（fastlio 的 esekfom+mtk+ikd_tree、batchlio 的 esekfom+mtk+ivox3d、
+> smallpointlio 的 small_ivox、superlio/srlivo 的 tsl 等）已归位到各前端的
+> `include/asuka/odometry/<前端>/` 下（含 `asuka_ikd_tree` 静态库源码）；
+> `thirdparty/` 仅保留跨模块共享件（ankerl/livox_ros_driver 生成头/
+> nlohmann/scancontext/sophus/vikit）。
+
+`AsyncOdometryEstimation`：三条有界环形缓冲——IMU（1000）/ 帧（50）/ 图像（50），满则丢该流最旧；worker 按队首传感器时间三路归并逐条取出
 （到达序，平局优先 imu -> image -> frame）、**每条先发射对应输入槽再喂给算法**，随后
-排空 `process_once()`；`stop()` 置位并 join worker。OFF 构建时严格退化为 imu/frame
-两路归并，行为与历史版本逐位一致。
+排空 `process_once()`；`stop()` 置位并 join worker。
 
 ## 全局回调插槽
 
@@ -40,9 +39,7 @@
 - 编译期禁止非平凡右值实参（防止首个观察者搬空参数）。
 
 六个核心槽：`on_insert_imu` / `on_insert_frame` / `on_insert_image`
-/ `on_new_frame` / `on_odometry_imu` / `on_odometry_opt`。FreeDOM 管线的三个
-`on_freedom_*` 槽由 freedom 扩展自持（`FreedomCallbacks`，静态对象定义于
-`libasuka_freedom.so`）。输入槽由 `AsyncOdometryEstimation`
+/ `on_new_frame` / `on_odometry_imu` / `on_odometry_opt`。输入槽由 `AsyncOdometryEstimation`
 在 worker 线程上、喂算法之前统一发射——扩展观察到的输入流与所加载的前端算法无关；
 `on_new_frame` 由各前端算法在 worker 线程发射；`on_odometry_imu` / `on_odometry_opt`
 分别由 imu_prediction 与后端优化扩展在自己的线程上发射。**三输入槽 + `on_new_frame`

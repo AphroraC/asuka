@@ -17,11 +17,11 @@
 - ***稳健*** —— 统一的 `KeyFrame` 输出契约；回调插槽逐观察者隔离异常；每个算法独立的参数文件
   （含各自的雷达/相机外参 `sensor` 块）；框架层统一处理时间回绕检测、地图保存与优雅退出。
 - ***精简高效*** —— 32 字节紧凑点类型 `asuka::PointXYZITRGB`（xyz + intensity + rgb +
-  curvature 时间），替代 48 B 的 `pcl::PointXYZINormal`；点内仅保留 xyz、intensity
-  与毫秒级时间偏移。
+  curvature 时间），替代 48 B 的 `pcl::PointXYZINormal`；点内仅保留 xyz、intensity、
+  rgb 与毫秒级时间偏移。
 - ***可扩展*** —— 核心回调插槽（`asuka::Callbacks` 六个）暴露 IMU / 帧 / 图像输入、
-  关键帧与两条扩展输出流；freedom 扩展演示了扩展自持私有插槽（`FreedomCallbacks`）的
-  模式。扩展模块即共享库，无需修改框架代码。
+  关键帧与两条扩展输出流；扩展可自持私有插槽（见
+  [扩展开发](extend.md)）。扩展模块即共享库，无需修改框架代码。
 
 ## 总体架构
 
@@ -44,7 +44,6 @@ asuka::OdometryEstimation   <== dlopen ==   libasuka_odometry_*.so
 | ExtensionModule（运行时 dlopen）                |
 |   rviz_viewer        可视化 / TF（asuka_ros 包） |
 |   imu_prediction     IMU 插帧高频里程计          |
-|   freedom            动态物去除管线（on_freedom_*）|
 |   optimization_loam  SC-A-LOAM 式后端           |
 +------------------------------------------------+
 ```

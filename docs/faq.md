@@ -11,8 +11,8 @@ TF（`world -> imu`）所有权规则：`config_extensions.json` 中 `publish_od
 两处要保持一致：`config_ros.json` 的 `lidar_type` 决定消息反序列化路径；外参取自
 **所加载前端自己的 `config_odometry` 文件的 `sensor` 块**（每个算法对齐其上游基准外参，
 不再有共享的 config_sensor.json）。切雷达时请核对该前端配置的外参是否对应当前设备。
-`livox_custom` 当前仅 fastlivo 消费——其余前端路由到它会打出
-`lidar frames dropped ...` 节流告警且不产生点云。另外 `RobosensePoint` 的逐点时间戳
+六前端均已实现 `livox_custom` 处理（fastlivo 为上游 avia_handler 直移植，其余为
+消息格式适配），无需按前端挑选雷达格式。另外 `RobosensePoint` 的逐点时间戳
 契约是纳秒（见 [点云格式](point_type.md)），使用按秒发布的驱动需在录制端转换。
 
 ### 为什么编译比普通 ROS 包慢？
@@ -36,8 +36,9 @@ fastlivo 的 `slam_mode` 改为 `ONLY_LIO`（srlivo 无此模式，必须带图 
 
 ### 同一进程能加载多个 asuka nodelet 吗？
 
-不建议。`GlobalConfig` 是非线程安全的进程级单例（重建时 delete+new），多实例会互相
-覆盖配置。每进程一个 `AsukaROS`。
+不能。`GlobalConfig` 是进程级单例（函数内静态、首次调用定型、线程安全），回调槽等
+全局静态对象亦每进程一份；`AsukaROS` 构造函数带进程级单实例守卫，同进程构造第二个
+实例（如同一 manager 加载两个 asuka nodelet）会直接抛异常。
 
 ### 数据时间回绕（rosbag 循环回放）会怎样？
 

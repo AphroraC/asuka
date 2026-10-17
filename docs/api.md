@@ -11,7 +11,6 @@
 | `ImageData` | `stamp` + `shared_ptr<const cv::Mat> image`（`Ptr` / `ConstPtr`；像素不可变入类型） |
 | `LivoxPoint` / `RobosensePoint` / `LivoxCustomPoint` | 原始雷达点（时间单位契约见[点云格式](point_type.md)） |
 | `KeyFrame` | 帧级输出契约，见[扩展开发](extend.md) |
-| `FreedomScanRemoval` / `FreedomRaycastEnhancement` / `FreedomMapRemoval` | FreeDOM 去除管线阶段载荷（`modules/freedom/`，见[内置扩展](extensions.md)） |
 | `LidarType` / `parse_lidar_type()` | `LIVOX` / `ROBOSENSE` / `LIVOX_CUSTOM` |
 | `FrameId` | `WORLD` / `LIDAR` / `IMU` / `CAMERA` |
 
@@ -19,7 +18,7 @@
 
 | API | 说明 |
 |---|---|
-| `GlobalConfig::instance(config_dir, override)` | 总配置单例（`config/config.json`） |
+| `GlobalConfig::instance(config_dir)` | 总配置单例（`config/config.json`；首次调用定型，目录此后不可变） |
 | `GlobalConfig::get_config_path(name)` | 由 `global` 段路由出组件配置文件路径 |
 | `Config::param<T>(module, key, default)` | 读取参数，缺失回退默认值并 warning |
 | `Config::param_cast<T>(module, key)` | 读取参数，缺失 `abort`（必选参数用这个） |
@@ -35,8 +34,9 @@
 |---|---|
 | `CallbackSlot<Func>::add(cb) -> int` | 注册观察者，返回稳定 id |
 | `CallbackSlot<Func>::remove(id)` | 注销（留空洞，id 不复用） |
+| `CallbackSlot<Func>::subscribe(cb)` | RAII 订阅：返回 `CallbackSubscription`，析构自动退订（内置扩展的标准形态） |
 | `CallbackSlot<Func>::call(args...)` | 发射（无锁快照遍历，逐观察者异常隔离） |
-| `Callbacks::on_insert_imu / on_insert_frame / on_insert_image / on_new_frame / on_odometry_imu / on_odometry_opt` | 六个核心全局插槽；FreeDOM 去除管线三插槽 `on_freedom_scan_removal` / `on_freedom_raycast_enhancement` / `on_freedom_map_removal` 由 freedom 扩展自持（`asuka::FreedomCallbacks`，定义于 `libasuka_freedom.so`，不在 core） |
+| `Callbacks::on_insert_imu / on_insert_frame / on_insert_image / on_new_frame / on_odometry_imu / on_odometry_opt` | 六个核心全局插槽；扩展私有点对点槽可自持于扩展自己的 .so（见[扩展开发](extend.md)） |
 
 ## OdometryEstimation（core/odometry_estimation.hpp）
 
@@ -47,7 +47,7 @@
 
 | 类 | 接口 | 说明 |
 |---|---|---|
-| `CloudPreprocess` | `preprocess(stamp, LivoxPoint/RobosensePoint/LivoxCustomPoint cloud) -> PointCloudT::Ptr` | 距离滤除、抽稀；每算法派生，由算法创建、框架持有并调用 |
+| `CloudPreprocess` | `preprocess(stamp, LivoxPoint/RobosensePoint/LivoxCustomPoint cloud) -> PointCloudT::Ptr` | 距离滤除、抽稀；每算法派生，由算法创建并持有、ROS 层经 `cloud_preprocess()` 借出调用 |
 | `ImuPreprocess` | `insert_imu / initialize / is_initialized / get_mean_acceleration / get_mean_gyroscope` | IMU 静态初始化与去畸变的算法侧基类 |
 
 ## ExtensionModule（utility/extension_module.hpp）

@@ -11,18 +11,18 @@
 | spdlog | 日志（`find_package(spdlog)`） |
 | OpenCV + cv_bridge | 视觉输入、`PointXYZITRGB` 点类型与 fastlivo/srlivo（无条件依赖） |
 | GTSAM | 仅 `BUILD_OPTIMIZATION_MODULES=ON` 时需要（`optimization_loam`） |
-| glog / TBB | 仅优化模块与 `superlio` 需要 |
+| TBB | 仅 `superlio` 需要 |
 
 ## 工作区布局
 
 ```
 src/
 ├── asuka/        # 算法库包：asuka_core、六前端插件、算法扩展、config/、thirdparty/
-├── asuka_ros/    # ROS 适配包：AsukaROS 适配层、rviz_viewer、apps 三入口、launch/
-└── fastlio/      # 原版 FAST-LIO 参考实现（对照评测用，可选保留）
+└── asuka_ros/    # ROS 适配包：AsukaROS 适配层、rviz_viewer、apps 三入口、launch/
 ```
 
-`asuka` 与 `asuka_ros` 均为 catkin 包；`fastlio` 仅作上游对照基准，不参与 asuka 运行时。
+`asuka` 与 `asuka_ros` 均为 catkin 包；各上游原始实现位于仓库 `test/` 下（仅作迁移
+对照基准，不参与 asuka 运行时）。
 
 ## 构建
 
