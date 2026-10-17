@@ -5,8 +5,6 @@
 
 namespace asuka {
 
-// The freedom extension's own slots (on_freedom_*) are hosted by the
-// freedom .so itself -- see asuka/modules/freedom/freedom_callbacks.hpp.
 // Core hosts only the process-wide bus every module shares.
 /**
  * @brief Process-wide callback slots shared by the odometry core and every
@@ -66,10 +64,6 @@ namespace asuka {
  *     their configured publish rate. Pose-only KeyFrame (id == -1, no cloud);
  *     the stamp is the emitting stream's own generation time (NOT the
  *     on_new_frame sweep-start contract).
- * - on_freedom_scan_removal / on_freedom_raycast_enhancement /
- *   on_freedom_map_removal
- * (The freedom extension's on_freedom_* slots are hosted by the freedom
- * extension itself; see freedom_callbacks.hpp for their contract.)
  */
 struct Callbacks {
   static CallbackSlot<void(const ImuData::ConstPtr&)> on_insert_imu;

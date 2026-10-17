@@ -258,26 +258,6 @@ add_library(asuka_imu_prediction SHARED src/asuka/modules/imu_prediction.cpp)
 target_link_libraries(asuka_imu_prediction asuka_core)
 list(APPEND asuka_LIBRARIES asuka_imu_prediction)
 
-# freedom: online dynamic object removal extension (RA-L 2025 FreeDOM port),
-# a pure-algorithm module like imu_prediction -- it consumes on_new_frame and
-# emits its results on the on_freedom_* slots. The depth-image enhancement
-# needs imgproc/photo/imgcodecs beyond the core component asuka_core links.
-find_package(OpenCV REQUIRED COMPONENTS core imgproc photo imgcodecs)
-add_library(asuka_freedom SHARED
-    src/asuka/modules/freedom/map.cpp
-    src/asuka/modules/freedom/scanmap.cpp
-    src/asuka/modules/freedom/mrmap.cpp
-    src/asuka/modules/freedom/raycast.cpp
-    src/asuka/modules/freedom/depth_image.cpp
-    src/asuka/modules/freedom/freedom.cpp
-    src/asuka/modules/freedom/freedom_viz.cpp
-    src/asuka/modules/freedom/freedom_module.cpp
-    src/asuka/modules/freedom/freedom_callbacks.cpp
-    src/asuka/modules/freedom/create.cpp
-  )
-target_link_libraries(asuka_freedom PUBLIC asuka_core ${OpenCV_LIBRARIES})
-list(APPEND asuka_LIBRARIES asuka_freedom)
-
 if(BUILD_OPTIMIZATION_MODULES)
   add_library(asuka_scancontext STATIC
     thirdparty/scancontext/Scancontext.cpp
