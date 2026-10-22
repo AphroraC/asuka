@@ -36,7 +36,7 @@ catkin build asuka asuka_ros
 | 变量 | 默认 | 生效包 | 说明 |
 |---|---|---|---|
 | `BUILD_OPTIMIZATION_MODULES` | `OFF` | asuka | 是否编译 `optimization_loam` 后端扩展；`OFF` 时不查找、不链接 GTSAM |
-| `BUILD_ODOMETRY_{FASTLIO,SMALLPOINTLIO,BATCHLIO,SUPERLIO,FASTLIVO,SRLIVO}` | `ON` | asuka | 每个里程计前端插件的独立编译开关（前端由 config_odometry 运行期 dlopen，关掉不影响核心） |
+| `BUILD_ODOMETRY_{FASTLIO,SMALLPOINTLIO,BATCHLIO,SUPERLIO,FASTLIVO,SRLIVO,ZLIO}` | `ON` | asuka | 每个里程计前端插件的独立编译开关（前端由 config_odometry 运行期 dlopen，关掉不影响核心）；zlio 的树内 gtest 回归随 GTest 发现自动构建 |
 
 需要后端模块时：
 

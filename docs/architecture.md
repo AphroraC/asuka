@@ -4,7 +4,7 @@
 
 | 包 | 内容 |
 |---|---|
-| `asuka` | `asuka_core`（配置/日志/回调槽/执行器/插件加载）、六前端插件、`imu_prediction` 与优化扩展、`config/`、`thirdparty/`。无 ROS 依赖（catkin 环境下以无组件包形式导出，亦可独立 CMake 安装） |
+| `asuka` | `asuka_core`（配置/日志/回调槽/执行器/插件加载）、七前端插件、`imu_prediction` 与优化扩展、`config/`、`thirdparty/`。无 ROS 依赖（catkin 环境下以无组件包形式导出，亦可独立 CMake 安装） |
 | `asuka_ros` | `AsukaROS` 适配层、`rviz_viewer` 扩展、三个入口 app、launch、nodelet_plugins.xml。全仓唯一链接 catkin 的包 |
 
 ## 分层与线程模型
@@ -18,7 +18,7 @@
 | 扩展 | `imu_prediction` / 优化扩展在 `asuka`；`rviz_viewer` 在 `asuka_ros` | 各自线程（一律"回调只入队"） |
 
 > 算法私有的 vendored 头（fastlio 的 esekfom+mtk+ikd_tree、batchlio 的 esekfom+mtk+ivox3d、
-> smallpointlio 的 small_ivox、superlio/srlivo 的 tsl 等）已归位到各前端的
+> smallpointlio 的 small_ivox、superlio/srlivo 的 tsl、zlio 的 nanoflann 等）已归位到各前端的
 > `include/asuka/odometry/<前端>/` 下（含 `asuka_ikd_tree` 静态库源码）；
 > `thirdparty/` 仅保留跨模块共享件（ankerl/livox_ros_driver 生成头/
 > nlohmann/scancontext/sophus/vikit）。

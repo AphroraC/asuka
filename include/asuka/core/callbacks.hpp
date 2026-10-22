@@ -47,11 +47,14 @@ namespace asuka {
  *     dense-window frames are the only id == -1 frames carrying a cloud).
  *     Every frame carries a usable imu_bias: the frontend's current bias
  *     estimate (components it does not estimate online stay zero).
- *     KeyFrame::stamp is pinned to the START time of the sensor sweep that
+ *     KeyFrame::stamp is pinned to the START time of the sensor data that
  *     produced the keyframe (for scan-based frontends: the input scan's
- *     header time). The carried pose/velocity/bias are the estimator's
- *     current state, which typically refers to the sweep's end; consumers
- *     needing a pose at exactly `stamp` must not assume they coincide.
+ *     header time; for the zlio frontend: the start of the adaptive
+ *     observation window that produced this frame -- zlio is a continuous
+ *     point stream with no scan concept). The carried pose/velocity/bias are
+ *     the estimator's current state, which typically refers to the window's
+ *     end; consumers needing a pose at exactly `stamp` must not assume they
+ *     coincide.
  *     imu_prediction re-anchors at this stamp and re-integrates the
  *     [sweep-start, now] IMU window from the sweep-end state.
  * - on_odometry_imu

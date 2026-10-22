@@ -31,6 +31,7 @@ option(BUILD_ODOMETRY_BATCHLIO "Build the asuka_odometry_batchlio odometry plugi
 option(BUILD_ODOMETRY_SUPERLIO "Build the asuka_odometry_superlio odometry plugin (and its superlio_basic helper)." ON)
 option(BUILD_ODOMETRY_FASTLIVO "Build the asuka_odometry_fastlivo odometry plugin." ON)
 option(BUILD_ODOMETRY_SRLIVO "Build the asuka_odometry_srlivo odometry plugin." ON)
+option(BUILD_ODOMETRY_ZLIO "Build the asuka_odometry_zlio odometry plugin (TDT z-localization frontend)." ON)
 
 # libstdc++'s atomic shared_ptr free functions only take the lock-free path
 # with cmpxchg16b (-mcx16): every TU that touches a CallbackSlot snapshot --
@@ -250,6 +251,59 @@ if(BUILD_ODOMETRY_SRLIVO)
   target_include_directories(asuka_odometry_srlivo PRIVATE include/asuka/odometry/srlivo)
   target_link_libraries(asuka_odometry_srlivo PUBLIC asuka_core ${OpenCV_LIBRARIES})
   list(APPEND asuka_LIBRARIES asuka_odometry_srlivo)
+endif()
+
+# asuka_odometry_zlio (TDT z-localization frontend): 15-dim semi-direct product
+# error-state filter over a continuous, adaptively windowed point stream. The
+# vendored libzlio core is ROS-free upstream; yaml-cpp was replaced by asuka's
+# config system (src/asuka/odometry/zlio/config.cpp read layer) and nanoflann is
+# vendored next to the module (registration.cpp is its only consumer).
+if(BUILD_ODOMETRY_ZLIO)
+  add_library(asuka_odometry_zlio SHARED
+    src/asuka/odometry/zlio/config.cpp
+    src/asuka/odometry/zlio/execution.cpp
+    src/asuka/odometry/zlio/filter.cpp
+    src/asuka/odometry/zlio/geometry.cpp
+    src/asuka/odometry/zlio/inertial.cpp
+    src/asuka/odometry/zlio/initialization.cpp
+    src/asuka/odometry/zlio/input.cpp
+    src/asuka/odometry/zlio/map.cpp
+    src/asuka/odometry/zlio/observation.cpp
+    src/asuka/odometry/zlio/odometry.cpp
+    src/asuka/odometry/zlio/plane.cpp
+    src/asuka/odometry/zlio/prediction.cpp
+    src/asuka/odometry/zlio/preintegration.cpp
+    src/asuka/odometry/zlio/registration.cpp
+    src/asuka/odometry/zlio/sampling.cpp
+    src/asuka/odometry/zlio/state.cpp
+    src/asuka/odometry/zlio/trajectory.cpp
+    src/asuka/odometry/zlio/uncertainty.cpp
+    src/asuka/odometry/zlio/window.cpp
+    src/asuka/odometry/zlio/cloud_preprocess.cpp
+    src/asuka/odometry/zlio/odometry_estimation.cpp
+    src/asuka/odometry/zlio/create.cpp
+  )
+  target_include_directories(asuka_odometry_zlio PRIVATE include/asuka/odometry/zlio)
+  target_link_libraries(asuka_odometry_zlio PUBLIC asuka_core)
+  list(APPEND asuka_LIBRARIES asuka_odometry_zlio)
+endif()
+
+# zlio regression tests (ported from upstream gtest suites; the yaml config
+# loader call in initialization_test was replaced by the default Config whose
+# values match config_zlio.json). Pure-algorithm, no ROS.
+if(BUILD_ODOMETRY_ZLIO)
+  find_package(GTest QUIET)
+  if(GTEST_FOUND)
+    enable_testing()
+    foreach(zlio_test state_test input_test initialization_test)
+      add_executable(asuka_zlio_${zlio_test} src/asuka/odometry/zlio/tests/${zlio_test}.cpp)
+      target_include_directories(asuka_zlio_${zlio_test} PRIVATE include/asuka/odometry/zlio)
+      target_link_libraries(asuka_zlio_${zlio_test} asuka_core asuka_odometry_zlio GTest::GTest GTest::Main pthread)
+      add_test(NAME zlio_${zlio_test} COMMAND asuka_zlio_${zlio_test})
+    endforeach()
+  else()
+    message(WARNING "GTest not found: zlio regression tests skipped")
+  endif()
 endif()
 
 # imu_prediction: a pure-algorithm extension module (no ROS dependency) --

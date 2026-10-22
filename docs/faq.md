@@ -59,7 +59,8 @@ fastlivo 的 `slam_mode` 改为 `ONLY_LIO`（srlivo 无此模式，必须带图 
 | superlio | 0.03 m | 闭环 |
 | batchlio | 8.90 m（修复前基线，input 模式） | 已知问题 1 的两个移植缺陷已于 2026-09-26 修复（饱和门单位 + VoxelGrid 字段清零，后者由 `PointXYZITRGB`/`curvature` 改名根治）；output/input 模式现均稳定闭环（终点 ~0.56 m），RMS 待重测 |
 
-  srlivo 未参评（需要图像流，liantiao 无图；验证素材见[里程计插件](odometry.md)）。
+  srlivo 未参评（需要图像流，liantiao 无图；验证素材见[里程计插件](odometry.md)）；
+  zlio 亦未参评（2026-10 迁移，验证记录见[里程计插件](odometry.md)的 zlio 节）。
 
 1. **batchlio**（2026-09-26 已修复，见下）：`use_imu_as_input=false`（output 模式，
    上游默认）曾在本包上运动开始后发散（速度线性增长至 ~76 m/s，~38% 处飞出至

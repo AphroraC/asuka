@@ -47,6 +47,7 @@ extern "C" asuka::OdometryEstimation* create_odometry_estimation();
 | `libasuka_odometry_superlio.so` | Super-LIO | Super voxel 流形 ESKF |
 | `libasuka_odometry_fastlivo.so` | FAST-LIVO2 | 稀疏体素八叉树 LIO + 光度 VIO |
 | `libasuka_odometry_srlivo.so` | sr_livo | CT-ICP 连续点流里程计 + R3LIVE 式视觉渲染/在线相机标定 |
+| `libasuka_odometry_zlio.so` | ZLIO (TDT z-localization) | 15 维半直积误差状态滤波 + 连续点流自适应观测窗口（无扫描概念） |
 | livox CustomMsg 输入 | — | `lidar_type: "livox_custom"`：`asuka::LivoxCustomPoint`（驱动逐点 offset_time ns）+ `CloudPreprocess` 第三重载；**六前端均已实现** CustomMsg 处理（fastlivo 为上游 avia_handler 直移植，其余五前端为消息格式适配——抽稀/去重等仍在各自算法内进行） |
 
 每个算法自带 `ImuPreprocess` / `CloudPreprocess` 派生类（IMU 初始化与去畸变方式不同，
@@ -155,6 +156,37 @@ asuka 的事件驱动 `process_once()` 等价替代。
 - **验证**：hku.bag LIVO 全程 EXIT=0（1.58x、1.25M 点彩色图、rgb 覆盖 85.7%）、garden.bag
   EXIT=0（752k 点）、双跑 PCD md5 一致、
   `nm -D` 零 ros 符号。
+
+## zlio（ZLIO 前端）
+
+上游 `test/z-localization`（TDT 哨兵定位开源，RM2026），其前端核心库 libzlio（约 7.5k 行）
+本身零 ROS 依赖，ROS2 只在上游 apps 层——是历次迁移中核心/ROS 分离最彻底的上游。
+
+- **算法**：SE2(3) 半直积 15 维误差状态（姿态/速度无噪声误差精确线性，参考文献
+  Equivariant Symmetries for Inertial Navigation Systems）+ 非静止初始化（多帧共面约束与
+  IMU 预积分同窗口联合优化）+ DLIO 式分段连续轨迹逐点去畸变 + 点矩统计量体素八叉平面
+  地图（增量更新、达限后释放统计量）+ 平面共享误差相关性 + 时空自适应（窗口间隔
+  0.03-0.12 s 按运动激励调度、PD 控制采样体素）。
+- **输入契约**：连续点流——上游仅消费带逐点时间的点云，无 intensity 使用（内部点
+  xyz+ns+id）；量程过滤在算法内部。asuka 侧 CloudPreprocess 三重载为纯格式转换
+  （curvature ms 时间基准），不添加任何上游没有的过滤。
+- **KeyFrame 契约**：按观测窗口（而非扫描）节奏发射；`stamp` 取窗口起点（zlio 例外
+  条款，见 `callbacks.hpp`）；位姿/速度/双偏置为窗口末端后验（15 维全填）；云经
+  `odometry.output_resolution` 门控导出（默认 0.1 m，0 关闭）、intensity 恒 0；
+  FrameResult 的 15 维协方差未进入 asuka 契约（丢弃）。
+- **save_map**：上游无地图导出，适配层按全量累积语义实现（窗口末端后验转世界系逐帧
+  追加）。
+- **配置**：`config_zlio.json` 键结构与上游 lio.yaml 同构（默认值=TDT 实机值）；
+  32 线大场景（robosense）需调大 `map.maximum_roots`（默认 1e6 为 Mid-360 基准，超限
+  抛 "moment map exceeds root resource limit" 并由 worker 熔断停机）。
+- **有意偏差**：yaml-cpp 读取层重写为 asuka 配置系统（校验层逐字保留）；nanoflann
+  1.5+ 需显式 buildIndex（上游所用旧版构造即建，已补一行版本适配）；上游的高频位姿
+  预测/暖重置/输入恢复未迁移（imu_prediction 扩展覆盖前者，后两者待 asuka 基类演进）。
+  多线程（关联 2 线程/启动优化 5 线程）存在约 1e-10 的上游固有调度非确定性。
+- **验证**：直链对拍（原版 vs 移植版同合成房间场景，单线程 116 帧全字段逐位一致；
+  多线程差异经自跑复现证实为上游并行调度非确定）；三格式端到端全绿（liantiao
+  11,381,390 / hku 10,780,201 / robosense 9,011,029 存图点，零 worker 异常、EXIT=0）；
+  双跑 PCD md5 一致；树内 gtest（state/input/initialization 三套上游测试）3/3 通过。
 
 ## 新增一种前端算法
 

@@ -1,16 +1,16 @@
 # Home
 
 **asuka** 是一个稳健、精简、高效、可扩展的 LiDAR-Inertial(-Visual) SLAM 框架（ROS1 / catkin）。
-它将六种 LiDAR-Inertial(-Visual) 里程计算法统一到同一套插件接口之下，通过全局回调插槽把前端状态
+它将七种 LiDAR-Inertial(-Visual) 里程计算法统一到同一套插件接口之下，通过全局回调插槽把前端状态
 分享给运行时加载的扩展模块（后端位姿图优化、高频 IMU 预测、可视化等）。
 
-仓库为双包结构：**`asuka`**（ROS-free 算法库：核心框架、六前端插件、算法扩展、配置）与
+仓库为双包结构：**`asuka`**（ROS-free 算法库：核心框架、七前端插件、算法扩展、配置）与
 **`asuka_ros`**（ROS 适配层：传感器接入、rviz_viewer、三个入口节点）。
 
 ## 特性
 
-- ***算法即插件*** —— FAST-LIO2、Batch-LIO、Small Point-LIO、Super-LIO、FAST-LIVO2、sr_livo
-  六种前端里程计各自编译为独立动态库，运行时经 `dlopen` 加载，修改 `config.json` 即可切换算法。
+- ***算法即插件*** —— FAST-LIO2、Batch-LIO、Small Point-LIO、Super-LIO、FAST-LIVO2、sr_livo、
+  ZLIO 七种前端里程计各自编译为独立动态库，运行时经 `dlopen` 加载，修改 `config.json` 即可切换算法。
 - ***视觉输入就绪*** —— `insert_image` 视觉输入接口与
   `on_insert_image` 回调槽；fastlivo 前端在该模式下支持 LiDAR-Visual-Inertial 紧耦合（LIVO），
   点类型为带 rgb 的 `asuka::PointXYZITRGB`。
@@ -38,7 +38,7 @@ AsyncOdometryEstimation                            <- 异步执行器（前端 w
 asuka::OdometryEstimation   <== dlopen ==   libasuka_odometry_*.so
         |                                             (fastlio / batchlio / smallpointlio /
         |  Callbacks::on_new_frame(KeyFrame)           superlio / fastlivo /
-        |                                              srlivo)
+        |                                              srlivo / zlio)
         v
 +------------------------------------------------+
 | ExtensionModule（运行时 dlopen）                |

@@ -1,0 +1,113 @@
+{
+  // 插件路由（asuka 框架键）。算法参数键结构与上游 lio.yaml 同构，
+  // 默认值即 TDT 原版配置（Mid-360 哨兵实机标定）。
+  "odometry": {
+    "so_name": "libasuka_odometry_zlio.so",
+    // 导出点云分辨率（m）：KeyFrame::cloud_imu 与存图累积消费的流；0 关闭导出。
+    "output_resolution": 0.1
+  },
+  "sensor": {
+    // 固定重力模长，m/s²。
+    "gravity": 9.81,
+    // 有效测距下限/上限，m（过滤在算法内部进行）。
+    "minimum_range": 0.5,
+    "maximum_range": 100.0,
+    // 雷达系到 IMU 系的刚性外参（旋转按 x、y、z、w）。
+    "body_from_lidar": {
+      "rotation_xyzw": [0, 0, 0, 1],
+      "translation": [-0.011, -0.02329, 0.04412]
+    }
+  },
+  "initialization": {
+    // IMU 系加速度偏置初值/先验中心与各轴标准差，m/s²。
+    "accel_bias": [0, 0, 0],
+    "accel_bias_std": [0.3, 0.3, 0.3],
+    // 参与启动联合估计的扫描帧数 / 重力初猜 IMU 样本数 / 交替优化轮数上限。
+    "window_frames": 20,
+    "seed_imu_samples": 31,
+    "maximum_refinements": 15,
+    // 原始回波采样体素边长与支持不足时的细采样边长，m。
+    "sample_size": 0.1,
+    "fallback_sample_size": 0.05,
+    "minimum_sampled_points": 1000,
+    "minimum_directional_support": 15,
+    // 粗／细阶段的相对代价变化收敛限值。
+    "relative_cost_tolerance": [0.05, 0.01],
+    "registration": {
+      "voxel_size": 0.5,
+      "neighbors": 5,
+      "minimum_map_points": 100,
+      "maximum_iterations": 4,
+      "plane_residual_tolerance": 0.1,
+      "prior_covariance_scale": 1000,
+      "rotation_tolerance": 0.00017452006980802793,
+      "position_tolerance": 0.00015,
+      "gyro_variance": 0.1,
+      "accel_variance": 1,
+      "bias_variance": 0.0001,
+      "initial_state_variance": 0.0001,
+      "initial_bias_variance": 0.00001
+    },
+    "optimization": {
+      "voxel_size": 1,
+      "maximum_depth": 2,
+      "minimum_points": 5,
+      "minimum_planes": 10,
+      "plane_variance": [0.02, 0.0025],
+      "plane_eigenvalue_ratio": 0.25,
+      "plane_middle_ratio": 0.12,
+      "imu_weight": 0.0001,
+      "thread_count": 5,
+      "maximum_iterations": 3,
+      "gyro_variance": 0.01,
+      "accel_variance": 1,
+      "gyro_bias_psd": 0.0001,
+      "accel_bias_psd": 0.0001
+    },
+    "uncertainty": {
+      "allow_configured_fallback": true,
+      "state_variance": [1, 1, 1, 0.0001, 0.001]
+    }
+  },
+  "filter": {
+    "maximum_iterations": 5,
+    // 点面关联线程数（1 或 2）。
+    "association_threads": 2,
+    "convergence_tolerance": 0.001,
+    "gyro_variance": 0.25,
+    "accel_variance": 0.5,
+    "gyro_bias_psd": 0.00000133,
+    "accel_bias_psd": 0.0000215
+  },
+  "map": {
+    "voxel_size": 0.5,
+    // 根体素数量上限（超限抛"moment map exceeds root resource limit"并熔断）：
+    // 默认 1e6 为上游 Mid-360 场景基准；32 线大场景（robosense）建议调大。
+    "maximum_roots": 1000000,
+    "range_sigma": 0.02,
+    "angle_sigma_degrees": 0.05
+  },
+  "sampling": {
+    "initial_size": 0.25,
+    "minimum_size": 0.02,
+    "maximum_size": 1.0,
+    "history_size": 5,
+    "minimum_points": 1000,
+    "maximum_points": 4000,
+    "scale_threshold": 30.0,
+    "exponent": 2.0,
+    "proportional_scale": 0.1,
+    "derivative_scale": 0.2,
+    "proportional_minimum": 0.000001,
+    "proportional_maximum": 0.0001,
+    "derivative_minimum": 0.000000001,
+    "derivative_maximum": 0.0000001
+  },
+  "window": {
+    // 观测窗口间隔上下界（秒）与点面噪声归一化后的运动外推 RMS 预算：
+    // zlio 的时空自适应在这两个界内调度更新节奏。
+    "maximum_interval": 0.12,
+    "minimum_interval": 0.03,
+    "normalized_error": 2.0
+  }
+}

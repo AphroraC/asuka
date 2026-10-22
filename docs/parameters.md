@@ -19,7 +19,7 @@ asuka 的参数系统由一个总入口 `config/config.json` 路由到各组件�
 ```
 
 `global` 的各键值是相对 `config/` 目录的文件名。**切换前端算法只需修改
-`config_odometry` 指向的文件**（`odometry/config_{fastlio,batchlio,smallpointlio,superlio,fastlivo,srlivo}.json`）。
+`config_odometry` 指向的文件**（`odometry/config_{fastlio,batchlio,smallpointlio,superlio,fastlivo,srlivo,zlio}.json`）。
 
 总路由 `config.json` 所在目录可用 ROS 参数 `config_path` 覆盖（约定该目录下存在
 `config.json`）；未设置或为空时回退到 `asuka` 包内 `config/` 目录。
@@ -34,7 +34,7 @@ asuka 的参数系统由一个总入口 `config/config.json` 路由到各组件�
 | `acc_scale` | IMU 加速度计刻度（ROS 层缩放后进前端） |
 | `imu_time_offset` | 加到 IMU 时间戳上的偏移（秒） |
 | `time_offset_lidar_to_imu` | 加到点云时间戳上的偏移（秒） |
-| `enable_map_saving` | 是否保存地图（对全部六前端统一门控） |
+| `enable_map_saving` | 是否保存地图（对全部前端统一门控） |
 | `map_saving_path` | 退出时保存地图的路径 |
 
 !!! warning "lidar_type × 数据实际格式"

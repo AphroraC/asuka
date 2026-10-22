@@ -53,7 +53,7 @@ TF（`world -> imu`）默认由 `imu_prediction` 的高频流发布；未加载 
 ## 地图保存
 
 进程退出前自动保存（`map_saving_path` 与 `enable_map_saving` 都在 `config_ros.json`，
-对全部六前端一致；各前端均为全量累积语义，见 [里程计插件](odometry.md)）：
+对全部前端一致；各前端均为全量累积语义，见 [里程计插件](odometry.md)）：
 
 - 路径无扩展名 → 写入 `<path>/mapping_<时间戳>.pcd`；
 - 路径带 `.pcd` 扩展名 → 按指定文件名写入；
