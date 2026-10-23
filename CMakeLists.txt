@@ -26,7 +26,6 @@ find_package(OpenCV REQUIRED COMPONENTS core)
 # config_odometry's so_name, so any of them can be skipped at build time
 # without touching the core. All default ON.
 option(BUILD_ODOMETRY_FASTLIO "Build the asuka_odometry_fastlio odometry plugin." ON)
-option(BUILD_ODOMETRY_SMALLPOINTLIO "Build the asuka_odometry_smallpointlio odometry plugin." ON)
 option(BUILD_ODOMETRY_BATCHLIO "Build the asuka_odometry_batchlio odometry plugin." ON)
 option(BUILD_ODOMETRY_SUPERLIO "Build the asuka_odometry_superlio odometry plugin (and its superlio_basic helper)." ON)
 option(BUILD_ODOMETRY_FASTLIVO "Build the asuka_odometry_fastlivo odometry plugin." ON)
@@ -135,17 +134,6 @@ if(BUILD_ODOMETRY_FASTLIO)
   # target_compile_definitions(asuka_odometry_fastlio PRIVATE ENABLE_OMP NUM_THREADS=1)
   target_link_libraries(asuka_odometry_fastlio PUBLIC asuka_core)
   list(APPEND asuka_LIBRARIES asuka_odometry_fastlio)
-endif()
-
-if(BUILD_ODOMETRY_SMALLPOINTLIO)
-  add_library(asuka_odometry_smallpointlio SHARED
-    src/asuka/odometry/smallpointlio/odometry_estimation.cpp
-    src/asuka/odometry/smallpointlio/imu_preprocess.cpp
-    src/asuka/odometry/smallpointlio/cloud_preprocess.cpp
-    src/asuka/odometry/smallpointlio/create.cpp
-  )
-  target_link_libraries(asuka_odometry_smallpointlio PUBLIC asuka_core)
-  list(APPEND asuka_LIBRARIES asuka_odometry_smallpointlio)
 endif()
 
 if(BUILD_ODOMETRY_BATCHLIO)

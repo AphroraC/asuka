@@ -9,8 +9,8 @@
 
 ## 特性
 
-- ***算法即插件*** —— FAST-LIO2、Batch-LIO、Small Point-LIO、Super-LIO、FAST-LIVO2、sr_livo、
-  ZLIO 七种前端里程计各自编译为独立动态库，运行时经 `dlopen` 加载，修改 `config.json` 即可切换算法。
+- ***算法即插件*** —— FAST-LIO2、Batch-LIO、Super-LIO、FAST-LIVO2、sr_livo、
+  ZLIO 六种前端里程计各自编译为独立动态库，运行时经 `dlopen` 加载，修改 `config.json` 即可切换算法。
 - ***视觉输入就绪*** —— `insert_image` 视觉输入接口与
   `on_insert_image` 回调槽；fastlivo 前端在该模式下支持 LiDAR-Visual-Inertial 紧耦合（LIVO），
   点类型为带 rgb 的 `asuka::PointXYZITRGB`。
@@ -36,9 +36,8 @@ AsyncOdometryEstimation                            <- 异步执行器（前端 w
         |                                              imu/frame/image 三路有界队列）
         v
 asuka::OdometryEstimation   <== dlopen ==   libasuka_odometry_*.so
-        |                                             (fastlio / batchlio / smallpointlio /
-        |  Callbacks::on_new_frame(KeyFrame)           superlio / fastlivo /
-        |                                              srlivo / zlio)
+        |                                             (fastlio / batchlio / superlio /
+        |  Callbacks::on_new_frame(KeyFrame)           fastlivo / srlivo / zlio)
         v
 +------------------------------------------------+
 | ExtensionModule（运行时 dlopen）                |

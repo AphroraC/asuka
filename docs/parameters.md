@@ -19,7 +19,7 @@ asuka 的参数系统由一个总入口 `config/config.json` 路由到各组件�
 ```
 
 `global` 的各键值是相对 `config/` 目录的文件名。**切换前端算法只需修改
-`config_odometry` 指向的文件**（`odometry/config_{fastlio,batchlio,smallpointlio,superlio,fastlivo,srlivo,zlio}.json`）。
+`config_odometry` 指向的文件**（`odometry/config_{fastlio,batchlio,superlio,fastlivo,srlivo,zlio}.json`）。
 
 总路由 `config.json` 所在目录可用 ROS 参数 `config_path` 覆盖（约定该目录下存在
 `config.json`）；未设置或为空时回退到 `asuka` 包内 `config/` 目录。
@@ -55,7 +55,7 @@ asuka 的参数系统由一个总入口 `config/config.json` 路由到各组件�
 }
 ```
 
-缺失时回退到各算法内置默认值（即其上游基准外参，如 smallpointlio 为 MID360 值）。
+缺失时回退到各算法内置默认值（即其上游基准外参）。
 fastlivo 额外有 `camera` 块（`image_size` / `scale` / 内参 / 畸变 / `T_imu_camera`
 TUM 七元），仅 LIVO 模式消费。
 
@@ -80,8 +80,7 @@ TUM 七元），仅 LIVO 模式消费。
   superlio 有 `kf` / `hash_map` 组），以文件内注释为准——多数键带原版基准标注；
 - 地图保存由 `config_ros.json` 的 `ros.enable_map_saving` 统一门控（对全部前端一致）。
   各前端均为全量累积语义：fastlio / fastlivo 按上游 `pcl_wait_save` 语义逐帧追加
-  全量去畸变扫描，batchlio / superlio 逐帧累加世界系点云，smallpointlio 在 ivox 插入点
-  同步累加；
+  全量去畸变扫描，batchlio / superlio 逐帧累加世界系点云；
 - 缺失的键回退到各算法内置默认值并记录 warning；关键参数建议用 `param_cast` 显式失败。
 
 ## config_extensions.json —— 扩展

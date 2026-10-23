@@ -18,9 +18,9 @@
 | 扩展 | `imu_prediction` / 优化扩展在 `asuka`；`rviz_viewer` 在 `asuka_ros` | 各自线程（一律"回调只入队"） |
 
 > 算法私有的 vendored 头（fastlio 的 esekfom+mtk+ikd_tree、batchlio 的 esekfom+mtk+ivox3d、
-> smallpointlio 的 small_ivox、superlio/srlivo 的 tsl、zlio 的 nanoflann 等）已归位到各前端的
+> superlio/srlivo 的 tsl、zlio 的 nanoflann 等）已归位到各前端的
 > `include/asuka/odometry/<前端>/` 下（含 `asuka_ikd_tree` 静态库源码）；
-> `thirdparty/` 仅保留跨模块共享件（ankerl/livox_ros_driver 生成头/
+> `thirdparty/` 仅保留跨模块共享件（livox_ros_driver 生成头/
 > nlohmann/scancontext/sophus/vikit）。
 
 `AsyncOdometryEstimation`：三条有界环形缓冲——IMU（1000）/ 帧（50）/ 图像（50），满则丢该流最旧；worker 按队首传感器时间三路归并逐条取出

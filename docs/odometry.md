@@ -1,7 +1,3 @@
-> **变更提示（2026-09）**：`smallpointlio` 的 `CloudPreprocess` 已退化为纯格式转换（tag 过滤 + 时间偏移），
-> 上游 `Preprocess` 的抽稀/距离过滤/降采样与 dense 分离逻辑下沉到算法的 `insert_frame`（worker 线程），
-> 原因是关键帧点云所需的 dense 全量点集只有算法侧能拿到。其他算法的 `CloudPreprocess` 未变。
-> 详见 `docs/smallpointlio_parity.md` 第 2.3 节。
 # Odometry plugins
 
 ## 插件机制
@@ -26,7 +22,7 @@ extern "C" asuka::OdometryEstimation* create_odometry_estimation();
 | `process_once()` | 处理一个同步单元；有输出返回 true |
 | `workload()` | 待处理帧数（背压与退出判断依据） |
 | `stop()` | 清空内部缓冲（析构链路调用） |
-| `save_map()` | 返回地图（调用前必须先停止 worker；统一受 `config_ros` 的 `ros.enable_map_saving` 门控）。各前端语义不同：fastlio / fastlivo 按上游 `pcl_wait_save` 逐帧追加全量去畸变扫描，batchlio / superlio 逐帧累加世界系点云，smallpointlio 在 ivox 插入点同步累加，srlivo 为带色色图 |
+| `save_map()` | 返回地图（调用前必须先停止 worker；统一受 `config_ros` 的 `ros.enable_map_saving` 门控）。各前端语义不同：fastlio / fastlivo 按上游 `pcl_wait_save` 逐帧追加全量去畸变扫描，batchlio / superlio 逐帧累加世界系点云，srlivo 为带色色图 |
 | `cloud_preprocess()` | 返回算法专属的 `CloudPreprocess`，由 AsukaROS 持有并在 ROS 线程调用（所有权仍在算法，AsukaROS 只借出共享指针；算法本身由 `AsyncOdometryEstimation` 独占持有，AsukaROS 不再单独持有算法指针） |
 
 关键帧输出：`process_once` 内部构造 `KeyFrame` 并调用 `Callbacks::on_new_frame`，
@@ -43,7 +39,6 @@ extern "C" asuka::OdometryEstimation* create_odometry_estimation();
 |---|---|---|
 | `libasuka_odometry_fastlio.so` | FAST-LIO2 | ikd-tree + IKFoM 迭代误差状态 EKF |
 | `libasuka_odometry_batchlio.so` | Batch-LIO (Point-LIO 系) | 滑窗批量优化（output/output+IMU 量测双模式），iVox 局部地图；output 模式（上游默认）曾因移植缺陷发散，2026-09-26 根因修复后为推荐模式（faq 已知问题 1） |
-| `libasuka_odometry_smallpointlio.so` | Small Point-LIO | 逐点更新 ESKF + small iVox |
 | `libasuka_odometry_superlio.so` | Super-LIO | Super voxel 流形 ESKF |
 | `libasuka_odometry_fastlivo.so` | FAST-LIVO2 | 稀疏体素八叉树 LIO + 光度 VIO |
 | `libasuka_odometry_srlivo.so` | sr_livo | CT-ICP 连续点流里程计 + R3LIVE 式视觉渲染/在线相机标定 |

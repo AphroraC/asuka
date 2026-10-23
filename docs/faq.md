@@ -55,7 +55,6 @@ fastlivo 的 `slam_mode` 改为 `ONLY_LIO`（srlivo 无此模式，必须带图 
 | 前端 | RMS vs fastlio | 备注 |
 |---|---|---|
 | fastlio | 参考 | 闭环终点残差 < 0.1 m |
-| smallpointlio | 3.27 m | 闭环（predict_cov 修复后有变化，见下 2） |
 | superlio | 0.03 m | 闭环 |
 | batchlio | 8.90 m（修复前基线，input 模式） | 已知问题 1 的两个移植缺陷已于 2026-09-26 修复（饱和门单位 + VoxelGrid 字段清零，后者由 `PointXYZITRGB`/`curvature` 改名根治）；output/input 模式现均稳定闭环（终点 ~0.56 m），RMS 待重测 |
 
@@ -80,12 +79,6 @@ fastlivo 的 `slam_mode` 改为 `ONLY_LIO`（srlivo 无此模式，必须带图 
    input 模式同样受益（终点 0.556 m）。同批已把 `ivox_nearby_type` /
    `filter_size_map` / `point_filter_num` / `init_map_size` / `imu_meas_*_cov`
    对齐回 avia.yaml 基准。
-2. **smallpointlio**：`save_map()` 曾恒返回空（地图落盘不可用）。2026-09-17 已实现
-   全量累加器（ivox 插入点同步累积，`enable_map_saving` 门控），liantiao 存图
-   8,400,894 点（逐点观察历史语义，比其他前端稠密属预期）。同批修复的还有
-   `predict_cov` 的 F(v,R) 块漏乘 `dt_cov`（公式级错误，见
-   [等价性验证](smallpointlio_parity.md) 第七节），修复后轨迹温和变化。
-
 ### 如何添加新算法 / 新扩展？
 
 分别见 [里程计插件](odometry.md) 与

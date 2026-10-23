@@ -45,8 +45,7 @@ struct KeyFrame {
 
 四个"链路槽"（三个输入槽 + `on_new_frame`）共用前端 worker 线程，相对顺序即算法的
 程序序；后两个是纯位姿帧（`id = -1`、无点云、无 bias），用于轨迹输出。
-`on_new_frame` 上的帧 `id >= 0`（`id = -1` 且带点云的帧仅 smallpointlio 的 dense
-窗口一例，见 `callbacks.hpp` 契约注记）。
+`on_new_frame` 上的帧 `id >= 0`。
 
 `CallbackSlot` 采用 copy-on-write 快照：发射路径无锁无分配，`add()` 返回的整数 id 用于
 `remove()`；观察者异常被逐个捕获并记录，不会中断发射线程。**回调在发射者线程同步执行**

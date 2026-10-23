@@ -43,8 +43,7 @@ namespace asuka {
  *     this order. KeyFrame::id counts frontend keyframes; pose-only frames
  *     (id == -1, no cloud) never appear on this slot -- a localization
  *     frontend publishes its map-fused pose on on_odometry_opt like any
- *     backend stream (smallpointlio's publish_odometry_without_downsample
- *     dense-window frames are the only id == -1 frames carrying a cloud).
+ *     backend stream.
  *     Every frame carries a usable imu_bias: the frontend's current bias
  *     estimate (components it does not estimate online stay zero).
  *     KeyFrame::stamp is pinned to the START time of the sensor data that
