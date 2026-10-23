@@ -80,7 +80,7 @@ include_directories(
   thirdparty
 )
 
-add_library(asuka_ikd_tree STATIC include/asuka/odometry/fastlio/ikd_tree/ikd_tree.cpp)
+add_library(asuka_ikd_tree STATIC include/asuka/modules/fastlio/ikd_tree/ikd_tree.cpp)
 # Its explicit KD_TREE<T> instantiations include asuka/core/types.hpp
 # (PointXYZIRGBOffset), which needs the OpenCV headers.
 target_include_directories(asuka_ikd_tree PUBLIC ${OpenCV_INCLUDE_DIRS})
@@ -118,10 +118,10 @@ list(APPEND asuka_LIBRARIES asuka_core)
 # asuka_odometry_fastlio
 if(BUILD_ODOMETRY_FASTLIO)
   add_library(asuka_odometry_fastlio SHARED
-    src/asuka/odometry/fastlio/odometry_estimation.cpp
-    src/asuka/odometry/fastlio/imu_preprocess.cpp
-    src/asuka/odometry/fastlio/cloud_preprocess.cpp
-    src/asuka/odometry/fastlio/create.cpp
+    src/asuka/modules/fastlio/odometry_estimation.cpp
+    src/asuka/modules/fastlio/imu_preprocess.cpp
+    src/asuka/modules/fastlio/cloud_preprocess.cpp
+    src/asuka/modules/fastlio/create.cpp
   )
   # OpenMP control for this frontend's two parallel loops (the process_scan
   # point-transform loop and the h_share_model residual loop share the
@@ -138,11 +138,11 @@ endif()
 
 if(BUILD_ODOMETRY_BATCHLIO)
   add_library(asuka_odometry_batchlio SHARED
-    src/asuka/odometry/batchlio/odometry_estimation.cpp
-    src/asuka/odometry/batchlio/imu_preprocess.cpp
-    src/asuka/odometry/batchlio/cloud_preprocess.cpp
-    src/asuka/odometry/batchlio/common.cpp
-    src/asuka/odometry/batchlio/create.cpp
+    src/asuka/modules/batchlio/odometry_estimation.cpp
+    src/asuka/modules/batchlio/imu_preprocess.cpp
+    src/asuka/modules/batchlio/cloud_preprocess.cpp
+    src/asuka/modules/batchlio/common.cpp
+    src/asuka/modules/batchlio/create.cpp
   )
     target_link_libraries(asuka_odometry_batchlio PUBLIC asuka_core)
   list(APPEND asuka_LIBRARIES asuka_odometry_batchlio)
@@ -151,17 +151,17 @@ endif()
 # asuka_odometry_superlio (Super-LIO port)
 if(BUILD_ODOMETRY_SUPERLIO)
   add_library(asuka_superlio_basic STATIC
-    src/asuka/odometry/superlio/manifold.cpp
+    src/asuka/modules/superlio/manifold.cpp
   )
   target_include_directories(asuka_superlio_basic PUBLIC include ${Eigen3_INCLUDE_DIRS})
   set_target_properties(asuka_superlio_basic PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
   add_library(asuka_odometry_superlio SHARED
-    src/asuka/odometry/superlio/odometry_estimation.cpp
-    src/asuka/odometry/superlio/eskf.cpp
-    src/asuka/odometry/superlio/imu_preprocess.cpp
-    src/asuka/odometry/superlio/cloud_preprocess.cpp
-    src/asuka/odometry/superlio/create.cpp
+    src/asuka/modules/superlio/odometry_estimation.cpp
+    src/asuka/modules/superlio/eskf.cpp
+    src/asuka/modules/superlio/imu_preprocess.cpp
+    src/asuka/modules/superlio/cloud_preprocess.cpp
+    src/asuka/modules/superlio/create.cpp
   )
   target_link_libraries(asuka_odometry_superlio PUBLIC asuka_core asuka_superlio_basic tbb ${PCL_LIBRARIES})
   list(APPEND asuka_LIBRARIES asuka_odometry_superlio)
@@ -193,14 +193,14 @@ if(BUILD_ODOMETRY_FASTLIVO)
   target_link_libraries(asuka_fastlivo_basic PUBLIC ${OpenCV_LIBRARIES})
 
   add_library(asuka_odometry_fastlivo SHARED
-    src/asuka/odometry/fastlivo/odometry_estimation.cpp
-    src/asuka/odometry/fastlivo/imu_preprocess.cpp
-    src/asuka/odometry/fastlivo/cloud_preprocess.cpp
-    src/asuka/odometry/fastlivo/voxel_map.cpp
-    src/asuka/odometry/fastlivo/vio.cpp
-    src/asuka/odometry/fastlivo/frame.cpp
-    src/asuka/odometry/fastlivo/visual_point.cpp
-    src/asuka/odometry/fastlivo/create.cpp
+    src/asuka/modules/fastlivo/odometry_estimation.cpp
+    src/asuka/modules/fastlivo/imu_preprocess.cpp
+    src/asuka/modules/fastlivo/cloud_preprocess.cpp
+    src/asuka/modules/fastlivo/voxel_map.cpp
+    src/asuka/modules/fastlivo/vio.cpp
+    src/asuka/modules/fastlivo/frame.cpp
+    src/asuka/modules/fastlivo/visual_point.cpp
+    src/asuka/modules/fastlivo/create.cpp
   )
   target_include_directories(asuka_odometry_fastlivo PRIVATE
     thirdparty/vikit/include
@@ -221,22 +221,22 @@ if(BUILD_ODOMETRY_SRLIVO)
   find_package(OpenCV REQUIRED COMPONENTS core calib3d)
 
   add_library(asuka_odometry_srlivo SHARED
-    src/asuka/odometry/srlivo/odometry_estimation.cpp
-    src/asuka/odometry/srlivo/optimize.cpp
-    src/asuka/odometry/srlivo/frame.cpp
-    src/asuka/odometry/srlivo/cloud_preprocess.cpp
-    src/asuka/odometry/srlivo/eskf_estimator.cpp
-    src/asuka/odometry/srlivo/image_processing.cpp
-    src/asuka/odometry/srlivo/optical_flow_tracker.cpp
-    src/asuka/odometry/srlivo/rgb_map_tracker.cpp
-    src/asuka/odometry/srlivo/cloud_map.cpp
-    src/asuka/odometry/srlivo/state.cpp
-    src/asuka/odometry/srlivo/utility.cpp
-    src/asuka/odometry/srlivo/lk_pyramid.cpp
-    src/asuka/odometry/srlivo/create.cpp
+    src/asuka/modules/srlivo/odometry_estimation.cpp
+    src/asuka/modules/srlivo/optimize.cpp
+    src/asuka/modules/srlivo/frame.cpp
+    src/asuka/modules/srlivo/cloud_preprocess.cpp
+    src/asuka/modules/srlivo/eskf_estimator.cpp
+    src/asuka/modules/srlivo/image_processing.cpp
+    src/asuka/modules/srlivo/optical_flow_tracker.cpp
+    src/asuka/modules/srlivo/rgb_map_tracker.cpp
+    src/asuka/modules/srlivo/cloud_map.cpp
+    src/asuka/modules/srlivo/state.cpp
+    src/asuka/modules/srlivo/utility.cpp
+    src/asuka/modules/srlivo/lk_pyramid.cpp
+    src/asuka/modules/srlivo/create.cpp
   )
   # its vendored tsl/robin_map headers resolve via the module-local include
-  target_include_directories(asuka_odometry_srlivo PRIVATE include/asuka/odometry/srlivo)
+  target_include_directories(asuka_odometry_srlivo PRIVATE include/asuka/modules/srlivo)
   target_link_libraries(asuka_odometry_srlivo PUBLIC asuka_core ${OpenCV_LIBRARIES})
   list(APPEND asuka_LIBRARIES asuka_odometry_srlivo)
 endif()
@@ -244,34 +244,34 @@ endif()
 # asuka_odometry_zlio (TDT z-localization frontend): 15-dim semi-direct product
 # error-state filter over a continuous, adaptively windowed point stream. The
 # vendored libzlio core is ROS-free upstream; yaml-cpp was replaced by asuka's
-# config system (src/asuka/odometry/zlio/config.cpp read layer) and nanoflann is
+# config system (src/asuka/modules/zlio/config.cpp read layer) and nanoflann is
 # vendored next to the module (registration.cpp is its only consumer).
 if(BUILD_ODOMETRY_ZLIO)
   add_library(asuka_odometry_zlio SHARED
-    src/asuka/odometry/zlio/config.cpp
-    src/asuka/odometry/zlio/execution.cpp
-    src/asuka/odometry/zlio/filter.cpp
-    src/asuka/odometry/zlio/geometry.cpp
-    src/asuka/odometry/zlio/inertial.cpp
-    src/asuka/odometry/zlio/initialization.cpp
-    src/asuka/odometry/zlio/input.cpp
-    src/asuka/odometry/zlio/map.cpp
-    src/asuka/odometry/zlio/observation.cpp
-    src/asuka/odometry/zlio/odometry.cpp
-    src/asuka/odometry/zlio/plane.cpp
-    src/asuka/odometry/zlio/prediction.cpp
-    src/asuka/odometry/zlio/preintegration.cpp
-    src/asuka/odometry/zlio/registration.cpp
-    src/asuka/odometry/zlio/sampling.cpp
-    src/asuka/odometry/zlio/state.cpp
-    src/asuka/odometry/zlio/trajectory.cpp
-    src/asuka/odometry/zlio/uncertainty.cpp
-    src/asuka/odometry/zlio/window.cpp
-    src/asuka/odometry/zlio/cloud_preprocess.cpp
-    src/asuka/odometry/zlio/odometry_estimation.cpp
-    src/asuka/odometry/zlio/create.cpp
+    src/asuka/modules/zlio/config.cpp
+    src/asuka/modules/zlio/execution.cpp
+    src/asuka/modules/zlio/filter.cpp
+    src/asuka/modules/zlio/geometry.cpp
+    src/asuka/modules/zlio/inertial.cpp
+    src/asuka/modules/zlio/initialization.cpp
+    src/asuka/modules/zlio/input.cpp
+    src/asuka/modules/zlio/map.cpp
+    src/asuka/modules/zlio/observation.cpp
+    src/asuka/modules/zlio/odometry.cpp
+    src/asuka/modules/zlio/plane.cpp
+    src/asuka/modules/zlio/prediction.cpp
+    src/asuka/modules/zlio/preintegration.cpp
+    src/asuka/modules/zlio/registration.cpp
+    src/asuka/modules/zlio/sampling.cpp
+    src/asuka/modules/zlio/state.cpp
+    src/asuka/modules/zlio/trajectory.cpp
+    src/asuka/modules/zlio/uncertainty.cpp
+    src/asuka/modules/zlio/window.cpp
+    src/asuka/modules/zlio/cloud_preprocess.cpp
+    src/asuka/modules/zlio/odometry_estimation.cpp
+    src/asuka/modules/zlio/create.cpp
   )
-  target_include_directories(asuka_odometry_zlio PRIVATE include/asuka/odometry/zlio)
+  target_include_directories(asuka_odometry_zlio PRIVATE include/asuka/modules/zlio)
   target_link_libraries(asuka_odometry_zlio PUBLIC asuka_core)
   list(APPEND asuka_LIBRARIES asuka_odometry_zlio)
 endif()
@@ -284,8 +284,8 @@ if(BUILD_ODOMETRY_ZLIO)
   if(GTEST_FOUND)
     enable_testing()
     foreach(zlio_test state_test input_test initialization_test)
-      add_executable(asuka_zlio_${zlio_test} src/asuka/odometry/zlio/tests/${zlio_test}.cpp)
-      target_include_directories(asuka_zlio_${zlio_test} PRIVATE include/asuka/odometry/zlio)
+      add_executable(asuka_zlio_${zlio_test} src/asuka/modules/zlio/tests/${zlio_test}.cpp)
+      target_include_directories(asuka_zlio_${zlio_test} PRIVATE include/asuka/modules/zlio)
       target_link_libraries(asuka_zlio_${zlio_test} asuka_core asuka_odometry_zlio GTest::GTest GTest::Main pthread)
       add_test(NAME zlio_${zlio_test} COMMAND asuka_zlio_${zlio_test})
     endforeach()

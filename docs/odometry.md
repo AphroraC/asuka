@@ -185,7 +185,7 @@ asuka 的事件驱动 `process_once()` 等价替代。
 
 ## 新增一种前端算法
 
-1. 在 `include/asuka/odometry/<name>/` 与 `src/asuka/odometry/<name>/` 下实现
+1. 在 `include/asuka/modules/<name>/` 与 `src/asuka/modules/<name>/` 下实现
    `asuka::OdometryEstimation` 派生类（参数在构造函数经 `Config` 读入，集中在 `asuka::xxx::OdometryEstimationParam param` 成员中）；
 2. 提供 `create.cpp`：
 

@@ -14,12 +14,12 @@
 | ROS 入口 | `asuka_ros/apps/asuka_{rosnode,rosbag,nodelet}.cpp` | ROS spinner（nodelet 为独立 callback queue + 1 线程 AsyncSpinner） |
 | ROS 层 | `asuka_ros/src/asuka_ros/asuka_ros.cpp` | spinner 线程：消息转换、时间/刻度校正、**点云预处理**、回绕检测 |
 | 异步执行器 | `asuka/core/async_odometry_estimation.cpp` | 前端 worker：按传感器时间归并逐条取出事件 -> 发射输入槽 -> `insert_imu` / `insert_frame` / `insert_image` -> `process_once` 排空；事件级异常边界（log+skip），连续 10 次失败熔断有序停机（`is_stopped()` 可查） |
-| 前端插件 | `asuka/odometry/*/` | 仅前端 worker 访问算法状态（缓冲入队加锁） |
+| 前端插件 | `asuka/modules/*/` | 仅前端 worker 访问算法状态（缓冲入队加锁） |
 | 扩展 | `imu_prediction` / 优化扩展在 `asuka`；`rviz_viewer` 在 `asuka_ros` | 各自线程（一律"回调只入队"） |
 
 > 算法私有的 vendored 头（fastlio 的 esekfom+mtk+ikd_tree、batchlio 的 esekfom+mtk+ivox3d、
 > superlio/srlivo 的 tsl、zlio 的 nanoflann 等）已归位到各前端的
-> `include/asuka/odometry/<前端>/` 下（含 `asuka_ikd_tree` 静态库源码）；
+> `include/asuka/modules/<前端>/` 下（含 `asuka_ikd_tree` 静态库源码）；
 > `thirdparty/` 仅保留跨模块共享件（livox_ros_driver 生成头/
 > nlohmann/scancontext/sophus/vikit）。
 
