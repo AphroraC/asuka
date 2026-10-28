@@ -1,0 +1,19 @@
+{
+  "extensions": {
+    "loading_extension_modules": [
+      "libasuka_rviz_viewer.so"
+    ]
+  },
+  "rviz_viewer": {
+    "world_frame_id": "camera_init",
+    "imu_frame_id": "body",
+    "publish_odometry": true,
+    "publish_odometry_imu": false,
+    "publish_cloud_imu": true,
+    "publish_cloud_world": true,
+    "publish_tf": true
+  },
+  "imu_prediction": {
+    "gravity": 9.81
+  }
+}

@@ -1,0 +1,141 @@
+{
+  "odometry": {
+    "so_name": "libasuka_odometry_fastlivo.so",
+    "slam_mode": "LIVO", // LIVO or ONLY_LIO
+    "imu_buffer_capacity": 1000,
+    "lidar_buffer_capacity": 50,
+    "image_buffer_capacity": 50,
+    "measures_capacity": 50
+  },
+  "preprocess": {
+    "blind": 0.8,
+    "scan_line": 6,
+    "point_filter_num": 1,
+    "hilti_en": false
+  },
+  "imu": {
+    "gyr_cov": 0.3,
+    "acc_cov": 0.5,
+    "imu_int_frame": 30,
+    "gravity_est_en": true,
+    "ba_bg_est_en": true
+  },
+  "lio": {
+    "voxel_size": 0.5,
+    "max_layer": 2,
+    "min_eigen_value": 0.0025,
+    "sigma_num": 3,
+    "beam_err": 0.05,
+    "dept_err": 0.02,
+    "layer_init_num": [
+      5,
+      5,
+      5,
+      5,
+      5
+    ],
+    "max_points_num": 50,
+    "max_iterations": 5,
+    "map_sliding_en": false,
+    "half_map_size": 100,
+    "sliding_thresh": 8
+  },
+  "vio": {
+    "normal_en": true,
+    "inverse_composition_en": false,
+    "max_iterations": 5,
+    "img_point_cov": 100.0,
+    "raycast_en": false,
+    "exposure_estimate_en": true,
+    "inv_expo_cov": 0.1,
+    "grid_size": 5,
+    "grid_n_height": 17,
+    "patch_pyrimid_level": 4,
+    "patch_size": 8,
+    "outlier_threshold": 1000.0
+  },
+  "time_offset": {
+    "img_time_offset": 0.1,
+    "exposure_time_init": 0.0
+  },
+  "mapping": {
+    "filter_size_surf": 0.1
+  },
+  "publish": {
+    "blind_rgb_points": 0.0,
+    "dense_map_en": true
+  },
+  "sensor": {
+    "extrinsic_T": [
+      0.04165,
+      0.02326,
+      -0.0284
+    ],
+    "extrinsic_R": [
+      1,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      1
+    ],
+    "gyro_noise": [
+      0.1,
+      0.1,
+      0.1
+    ],
+    "acc_noise": [
+      0.1,
+      0.1,
+      0.1
+    ],
+    "gyro_bias": [
+      0.0001,
+      0.0001,
+      0.0001
+    ],
+    "acc_bias": [
+      0.0001,
+      0.0001,
+      0.0001
+    ],
+    "gyr_cov": 0.1,
+    "acc_cov": 0.1,
+    "b_gyr_cov": 0.0001,
+    "b_acc_cov": 0.0001
+  },
+  "camera": {
+    "image_size": [
+      1280,
+      1024
+    ],
+    "scale": 0.5,
+    "T_imu_camera": [
+      0.067370,
+      0.041242,
+      0.076422,
+      -0.499195,
+      0.503820,
+      -0.493067,
+      0.503841
+    ],
+    "intrinsics": [
+      1293.57,
+      1293.32,
+      626.914,
+      522.799
+    ],
+    "distortion_model": "plumb_bob",
+    "distortion_coeffs": [
+      -0.07616,
+      0.123001,
+      -0.00113,
+      0.000251,
+      0.0
+    ],
+    "global_shutter": true
+  }
+}

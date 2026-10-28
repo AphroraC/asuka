@@ -1,0 +1,76 @@
+# Core API reference
+
+头文件均在 `include/asuka/` 下，符号位于 `namespace asuka`。
+
+## 数据类型（core/types.hpp）
+
+| 类型 | 说明 |
+|---|---|
+| `ImuData` | `stamp` + `linear_acc` + `angular_vel`（`Ptr` / `ConstPtr`） |
+| `PointXYZITRGB` / `PointT` / `PointCloudT` | 32 B 紧凑点类型，`curvature` 承载逐点毫秒时间（PCL 滤镜原生兼容），见[点云格式](point_type.md) |
+| `ImageData` | `stamp` + `shared_ptr<const cv::Mat> image`（`Ptr` / `ConstPtr`；像素不可变入类型） |
+| `LivoxPoint` / `RobosensePoint` / `LivoxCustomPoint` | 原始雷达点（时间单位契约见[点云格式](point_type.md)） |
+| `KeyFrame` | 帧级输出契约，见[扩展开发](extend.md) |
+| `LidarType` / `parse_lidar_type()` | `LIVOX` / `ROBOSENSE` / `LIVOX_CUSTOM` |
+| `FrameId` | `WORLD` / `IMU` / `LIDAR` / `CAMERA` |
+
+## Config / GlobalConfig（utility/config.hpp）
+
+| API | 说明 |
+|---|---|
+| `GlobalConfig::instance(config_dir)` | 总配置单例（`config/config.json`；首次调用定型，目录此后不可变） |
+| `GlobalConfig::get_config_path(name)` | 由 `global` 段路由出组件配置文件路径 |
+| `Config::param<T>(module, key, default)` | 读取参数，缺失回退默认值并 warning |
+| `Config::param_cast<T>(module, key)` | 读取参数，缺失 `abort`（必选参数用这个） |
+| `Config::param_nested<T>(modules, key)` | 嵌套键读取（如 sensor 块） |
+| `Config::override_param / save / has_param` | 覆写、落盘、存在性查询 |
+
+支持类型含数值、字符串、`std::vector`、`Eigen::Vector3d/4d`、`Matrix3d`、
+`Quaterniond`、`Isometry3d`（见 `config_impl.hpp` 的 `ConfigTraits`）。
+
+## CallbackSlot / Callbacks（utility/callback_slot.hpp, core/callbacks.hpp）
+
+| API | 说明 |
+|---|---|
+| `CallbackSlot<Func>::add(cb) -> int` | 注册观察者，返回稳定 id |
+| `CallbackSlot<Func>::remove(id)` | 注销（留空洞，id 不复用） |
+| `CallbackSlot<Func>::subscribe(cb)` | RAII 订阅：返回 `CallbackSubscription`，析构自动退订（内置扩展的标准形态） |
+| `CallbackSlot<Func>::call(args...)` | 发射（无锁快照遍历，逐观察者异常隔离） |
+| `Callbacks::on_insert_imu / on_insert_frame / on_insert_image / on_new_frame / on_odometry_imu` | 五个核心全局插槽；扩展私有点对点槽可自持于扩展自己的 .so（见[扩展开发](extend.md)） |
+
+## OdometryEstimation（core/odometry_estimation.hpp）
+
+见[里程计插件](odometry.md)。前端插件须实现
+`create_odometry_estimation()` C 工厂。
+
+## CloudPreprocess / ImuPreprocess（core/*.hpp）
+
+| 类 | 接口 | 说明 |
+|---|---|---|
+| `CloudPreprocess` | `preprocess(stamp, LivoxPoint/RobosensePoint/LivoxCustomPoint cloud) -> PointCloudT::Ptr` | 距离滤除、抽稀；每算法派生，由算法创建并持有、ROS 层经 `cloud_preprocess()` 借出调用 |
+| `ImuPreprocess` | `insert_imu / initialize / is_initialized / get_mean_acceleration / get_mean_gyroscope` | IMU 静态初始化与去畸变的算法侧基类 |
+
+## ExtensionModule（utility/extension_module.hpp）
+
+| API | 说明 |
+|---|---|
+| `stop()` | join 自有线程、停止槽发射；**必须幂等**，默认空实现 |
+| `at_exit(dump_path)` | 退出收尾（如轨迹/地图导出），在全部 stop 之后调用 |
+| `ExtensionModule::ok()` | 扩展健康查询（默认 `true`；有故障模式的模块覆写） |
+| `ExtensionModule::load_module(so_name)` | `dlopen` 并调用 `create_extension_module()` |
+| `ExtensionModule::load_configured_modules()` | 加载 `config_extensions.json` 列出的全部扩展（失败告警跳过） |
+| `OdometryEstimation::load_configured()` | 按 `config_odometry` 的 `so_name` 加载前端（失败抛异常） |
+| `load_config(name)` | 便捷加载路由配置（等价 `Config(GlobalConfig::get_config_path(name))`） |
+
+## AsukaROS / AsyncOdometryEstimation（asuka_ros.hpp, core/async_odometry_estimation.hpp）
+
+| API | 说明 |
+|---|---|
+| `AsukaROS(nh)` | 完成配置加载、插件加载、扩展加载 |
+| `insert_imu / insert_frame / insert_image` | ROS 消息入口 |
+| `workload() / wait(auto_quit)` | 背压与排空等待（`wait` 经执行器条件变量检测排空，熔断自停即返回，保持 Ctrl-C 响应） |
+| `ok()` | 系统健康查询：执行器未熔断/未停止 且 全部扩展 `ok()` |
+| `save(path)` | 停 worker 并保存地图 |
+| `extensions()` | 已加载扩展列表 |
+| `AsyncOdometryEstimation::stop() / is_stopped()` | 执行器停止（幂等，恒 join）/ 停止态查询（含连续 10 次事件失败熔断自停） |
+| `AsyncOdometryEstimation::wait_for(timeout)` | 有界等待：输入队列与算法 pending 全部排空、或 worker 停止即返回 `true`，超时返回 `false` |

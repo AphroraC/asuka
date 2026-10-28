@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>asuka</name>
+  <version>1.0.0</version>
+  <description>
+    asuka: versatile and extensible lidar-imu-visual odometry and mapping framework.
+  </description>
+
+  <maintainer email="aphrorac@gmail.com">aphrorac</maintainer>
+  <license>GPL-3.0</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>eigen</build_depend>
+  <build_depend>pcl</build_depend>
+  <build_depend>spdlog</build_depend>
+  <build_depend>libboost-dev</build_depend>
+
+  <exec_depend>spdlog</exec_depend>
+</package>

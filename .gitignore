@@ -1,3 +1,15 @@
+#Pointclouds
+*.pcd
+*.ply
+*.xyz
+*.bin
+
+#Logging
+logs/
+
+#MkDocs build output (published by .github/workflows/deploy-docs.yml)
+site/
+
 # Prerequisites
 *.d
 
@@ -22,6 +34,7 @@
 *.dylib
 *.dll
 *.so.*
+
 
 # Fortran module files
 *.mod
